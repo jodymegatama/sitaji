@@ -1,0 +1,697 @@
+/* =====================================================================
+   SITAJI — Design System (v3)
+   Palet: Indigo #4f46e5 · Emerald #10b981 · Slate #64748b
+   Font: Plus Jakarta Sans + JetBrains Mono (angka)
+   ===================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --primary:      #4f46e5;
+  --primary-soft: #eef2ff;
+  --accent:       #5558e6;
+  --success:      #0e834e;
+  --danger:       #dc2626;
+  --warning:      #f59e0b;
+  --dark:         #0f172a;
+  --slate:        #5f6e82;
+  --bg-body:      #f1f5f9;
+  --card:         #FFFFFF;
+  --ink:          #0f172a;
+  --muted:        #5f6e82;
+  --border:       #e2e8f0;
+  --card-radius:  24px;
+  --shadow:       0 2px 12px rgba(79,70,229,.08);
+  --shadow-lg:    0 20px 25px -5px rgba(0,0,0,0.05);
+}
+
+* { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
+.mono, .num, .rupiah, td.nominal, td.jumlah, code, pre, [class*="mono"] {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace !important;
+}
+
+body.bg-app { background: var(--bg-body); color: var(--ink); }
+
+/* ── Brand logo ──────────────────────────────────────────────────── */
+.brand-logo {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 1.1rem;
+}
+
+/* ── Navbar (glass) ──────────────────────────────────────────────── */
+.app-navbar {
+  background: rgba(255,255,255,0.9) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+.app-navbar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+.nav-pill {
+  display: inline-block; padding: .5rem 1.1rem; border-radius: 50px; white-space: nowrap;
+  color: var(--slate); text-decoration: none; border: 1px solid transparent;
+  font-size: .92rem; font-weight: 500; transition: background .2s, color .2s;
+}
+.nav-pill:hover { background: var(--primary-soft); color: var(--primary); }
+.nav-pill.active { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff !important; }
+
+/* ── Stat / Summary Cards ────────────────────────────────────────── */
+.stat-card, .card-stats {
+  background: var(--card); border-radius: var(--card-radius, 24px);
+  padding: 1.25rem 1.5rem; border-left: 5px solid var(--primary);
+  box-shadow: var(--shadow); display: flex; align-items: center;
+  justify-content: space-between; height: 100%;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+.stat-card .label { font-size: .72rem; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+.stat-card .value { font-size: 1.55rem; font-weight: 700; margin-top: .2rem; }
+.stat-card.green { border-color: var(--success); }
+.stat-card.red   { border-color: var(--danger); }
+.stat-card.yellow{ border-color: var(--warning); }
+.stat-card .icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary-soft); color: var(--primary); font-size: 1.25rem;
+  transition: background .2s, color .2s;
+}
+.stat-card:hover .icon { background: #e0e7ff; }
+.stat-card.green .icon  { background: #d1fae5; color: var(--success); }
+.stat-card.green:hover .icon { background: #a7f3d0; }
+.stat-card.red .icon    { background: #fee2e2; color: var(--danger); }
+.stat-card.red:hover .icon { background: #fecaca; }
+.stat-card.yellow .icon { background: #fef3c7; color: var(--warning); }
+.stat-card.yellow:hover .icon { background: #fde68a; }
+
+.tren-card {
+  background: linear-gradient(135deg, var(--primary), #3730a3); color: #fff;
+  border-radius: var(--card-radius, 24px); padding: 1.25rem 1.5rem; border: 0;
+  box-shadow: var(--shadow);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.tren-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+.tren-card .label {
+  color: rgba(255,255,255,.7); font-size: .72rem;
+  letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+}
+
+/* ── App Card ────────────────────────────────────────────────────── */
+.app-card {
+  background: var(--card); border-radius: var(--card-radius, 24px);
+  padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border);
+  transition: box-shadow 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.app-card:hover { box-shadow: var(--shadow-lg); }
+
+/* ── DataTable ───────────────────────────────────────────────────── */
+table.dataTable thead th {
+  font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--border) !important;
+  background: var(--primary-soft);
+}
+table.dataTable tbody td { padding: 1rem .75rem; vertical-align: middle; }
+table.dataTable tbody tr:hover { background: var(--primary-soft); }
+
+.badge-thp {
+  background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff;
+  padding: .45rem .9rem; border-radius: 8px; font-weight: 600;
+}
+.badge-gol {
+  background: var(--primary-soft); color: var(--primary); padding: .25rem .6rem;
+  border-radius: 6px; font-size: .78rem; font-weight: 600;
+}
+.text-bruto { color: var(--success); font-weight: 600; }
+.text-pot   { color: var(--danger); }
+
+/* ── Action Button (table icon pills) ────────────────────────────── */
+.btn-action-modern {
+  width: 38px; height: 38px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid var(--border); color: var(--slate);
+  transition: background .15s, color .15s, border-color .15s;
+  text-decoration: none;
+}
+.btn-action-modern:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+.btn-action-modern.text-danger { border-color: #f5c6c1; color: var(--danger); }
+.btn-action-modern.text-danger:hover { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.btn-ico { /* legacy alias */ }
+
+.btn-action-sm {
+  width: 34px; height: 34px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid var(--border); color: var(--slate);
+  transition: background .15s, color .15s;
+}
+.btn-action-sm:hover { background: var(--primary-soft); color: var(--primary); }
+
+/* ── Pill Button Utility (shared) ────────────────────────────────── */
+.btn-pill {
+  border-radius: 50px;
+  font-weight: 600;
+  padding: 10px 24px;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.btn-pill:hover { transform: translateY(-1px); }
+
+/* ── Pill Button Modifiers (outline/solid, combine with .btn-pill) ── */
+.btn-pill-outline-success {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 26px; text-decoration: none;
+  background: #fff; color: var(--success); border: 2px solid var(--success);
+}
+.btn-pill-outline-success:hover { background: var(--success); color: #fff; }
+
+.btn-pill-outline-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 26px; text-decoration: none;
+  background: #fff; color: var(--primary); border: 2px solid var(--primary);
+}
+.btn-pill-outline-primary:hover { background: var(--primary); color: #fff; }
+
+.btn-pill-solid-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 26px; text-decoration: none;
+  background: var(--primary); color: #fff; border: 2px solid var(--primary);
+}
+.btn-pill-solid-primary:hover { background: var(--accent); border-color: var(--accent); }
+
+/* ── Segmented Button Group (payroll dashboard) ──────────────────── */
+.btn-group-payroll {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(16,24,40,0.06),
+    0 8px 16px -4px rgba(37,84,240,0.18),
+    0 2px 6px -2px rgba(16,24,40,0.10);
+}
+.btn-group-payroll .btn-payroll {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 14px; font-weight: 600;
+  padding: 0 18px; height: 42px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border: 1px solid #E5E7EB;
+  border-left: none;
+  cursor: pointer; text-decoration: none;
+  transition: background .15s ease, transform .15s ease;
+}
+.btn-group-payroll .btn-payroll:first-child {
+  border-left: 1px solid #E5E7EB;
+}
+.btn-group-payroll .btn-payroll:active {
+  transform: scale(0.97);
+}
+.btn-group-payroll .btn-export {
+  color: #12A150;
+}
+.btn-group-payroll .btn-export:hover {
+  background: #F0FCF5;
+}
+.btn-group-payroll .btn-import {
+  color: #2563EB;
+}
+.btn-group-payroll .btn-import:hover {
+  background: #EFF4FF;
+}
+.btn-group-payroll .btn-tambah {
+  background: linear-gradient(180deg, #3A66FF 0%, #2554F0 100%);
+  color: #fff;
+  border: 1px solid #2554F0;
+  border-left: none;
+}
+.btn-group-payroll .btn-tambah:hover {
+  background: linear-gradient(180deg, #2F5BF5 0%, #1E45D1 100%);
+}
+
+/* ── Modern Buttons ──────────────────────────────────────────────── */
+.btn-primary-modern {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 26px; border-radius: 999px;
+  font-size: .9rem; font-weight: 600; text-decoration: none;
+  background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border: none;
+  box-shadow: 0 8px 20px rgba(79,70,229,.18);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap; cursor: pointer; line-height: 1.2;
+}
+.btn-primary-modern:hover { opacity: .92; color: #fff; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(79,70,229,.25); }
+.btn-primary-modern:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; transform: none; }
+.btn-primary-modern.w-100 { justify-content: center; }
+
+.btn-secondary-modern {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 24px; border-radius: 999px;
+  font-size: .9rem; font-weight: 600; text-decoration: none;
+  background: #fff; color: var(--slate); border: 1px solid var(--border);
+  box-shadow: 0 3px 10px rgba(0,0,0,.04);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap; cursor: pointer; line-height: 1.2;
+}
+.btn-secondary-modern:hover { background: var(--primary-soft); color: var(--primary); transform: translateY(-1px); border-color: var(--primary); }
+.btn-secondary-modern:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
+.btn-secondary-modern.w-100 { justify-content: center; }
+
+.btn-success-modern {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 26px; border-radius: 999px;
+  font-size: .9rem; font-weight: 600; text-decoration: none;
+  background: var(--success); color: #fff; border: none;
+  box-shadow: 0 8px 20px rgba(16,185,129,.18);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap; cursor: pointer; line-height: 1.2;
+}
+.btn-success-modern:hover { opacity: .9; color: #fff; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(16,185,129,.25); }
+.btn-success-modern:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
+.btn-success-modern.w-100 { justify-content: center; }
+
+.btn-danger-modern {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 50px; padding: 0 24px; border-radius: 999px;
+  font-size: .9rem; font-weight: 600; text-decoration: none;
+  background: #fff; color: var(--danger); border: 1px solid var(--danger);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap; cursor: pointer; line-height: 1.2;
+}
+.btn-danger-modern:hover { background: var(--danger); color: #fff; transform: translateY(-1px); }
+
+/* ── Login ───────────────────────────────────────────────────────── */
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center;
+  justify-content: center; background: var(--bg-body); padding: 1rem;
+}
+.login-card {
+  background: #fff; border-radius: 28px;
+  box-shadow: var(--shadow);
+  padding: 2.5rem; max-width: 450px; width: 100%;
+}
+.login-logo {
+  display: flex; align-items: center;
+  justify-content: center; margin: 0 auto; overflow: hidden;
+}
+.login-logo img { max-width: 300px; height: auto; display: block; }
+.btn-brand {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff; border: none; padding: .75rem 1.25rem;
+  border-radius: 12px; font-weight: 600; width: 100%;
+}
+.btn-brand:hover { opacity: .92; color: #fff; }
+
+/* ── Payroll Form ────────────────────────────────────────────────── */
+.section-label {
+  font-size: .7rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+  padding-bottom: .5rem; border-bottom: 1px dashed var(--border);
+}
+.section-label.green  { color: var(--success); }
+.section-label.red    { color: var(--danger); }
+.section-label.yellow { color: var(--warning); }
+
+.summary-card {
+  background: #fff; border-radius: 24px;
+  padding: 1.5rem; border: 2px solid var(--primary-soft);
+  position: sticky; top: 90px; box-shadow: var(--shadow);
+}
+.summary-card .net {
+  background: var(--primary-soft); border-radius: 12px; padding: 1rem; text-align: center;
+}
+.summary-card .net .label {
+  font-size: .72rem; letter-spacing: .08em; color: var(--muted); font-weight: 600;
+}
+.summary-card .net .value {
+  font-size: 1.8rem; color: var(--primary); font-weight: 700;
+}
+
+/* ── Slip Detail ─────────────────────────────────────────────────── */
+.slip-section {
+  border: 1px solid var(--border); border-radius: 14px; padding: 1rem;
+}
+.slip-section.in  { border-color: #a7f3d0; }
+.slip-section.out { border-color: #fed7aa; }
+.slip-row {
+  display: flex; justify-content: space-between;
+  padding: .55rem .85rem; border-radius: 8px;
+}
+.slip-row + .slip-row { margin-top: .25rem; }
+.slip-row.highlight { background: #d1fae5; border: 1px solid #a7f3d0; font-weight: 600; }
+.slip-row.total { border-top: 2px solid; font-weight: 700; margin-top: .5rem; padding-top: .5rem; }
+.slip-row.total.in { border-top-color: #a7f3d0; }
+.slip-row.total.out { border-top-color: #fed7aa; }
+.slip-total {
+  background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border-radius: 14px;
+  padding: 1.25rem; margin-top: 1rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.slip-total .label { font-size: .72rem; letter-spacing: .08em; color: rgba(255,255,255,.7); }
+.slip-total .value { font-size: 1.8rem; font-weight: 800; }
+
+/* ── Modern Modal ────────────────────────────────────────────────── */
+.modal-modern .modal-content {
+  border-radius: 28px; border: none; box-shadow: 0 25px 60px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+.modal-modern .modal-header {
+  background: #fff; border-bottom: 1px solid var(--border); padding: 20px 24px 16px;
+}
+.modal-modern .modal-body  { padding: 24px; }
+.modal-modern .modal-footer {
+  border-top: 1px solid var(--border); padding: 16px 24px 20px;
+}
+
+/* ── Flatpickr month-range popup ──────────────────────────────────── */
+.flatpickr-calendar {
+  z-index: 9999 !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--border) !important;
+  margin-top: 8px;
+}
+
+/* ── Periode Table Redesign ────────────────────────────────────────── */
+.table-periode {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.table-periode thead th {
+  background: #fafbff;
+  font-size: .7rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border) !important;
+}
+.table-periode tbody td {
+  padding: 1rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+.table-periode tbody tr:last-child td {
+  border-bottom: none;
+}
+.table-periode tbody tr {
+  transition: background .15s ease;
+}
+.table-periode tbody tr:hover {
+  background: #f8faff;
+}
+/* Override DataTables default header bg */
+table.table-periode.dataTable thead th {
+  background: #fafbff !important;
+}
+/* DataTables wrapper inside p-0 card */
+.app-card.p-0 div.dataTables_wrapper {
+  padding: 0 1.5rem 1rem;
+}
+.app-card.p-0 div.dataTables_wrapper .dataTables_filter,
+.app-card.p-0 div.dataTables_wrapper .dataTables_info,
+.app-card.p-0 div.dataTables_wrapper .dataTables_paginate {
+  padding-top: 0.75rem;
+}
+
+/* ── Status Badge with Dot ────────────────────────────────────────── */
+.badge-dot {
+  display: inline-flex !important;
+  align-items: center;
+  gap: .4rem;
+}
+.badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ── Table Row Card (responsive stacked) ──────────────────────────── */
+@media (max-width: 576px) {
+  .table-periode tbody td:first-child {
+    padding-left: 0.75rem;
+  }
+  .table-periode thead {
+    display: none;
+  }
+  .table-periode,
+  .table-periode tbody,
+  .table-periode tr,
+  .table-periode td {
+    display: block;
+  }
+  .table-periode tbody tr {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .table-periode tbody tr:hover {
+    background: #f8faff;
+  }
+  .table-periode tbody td {
+    padding: 0.35rem 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .table-periode tbody td:before {
+    content: attr(data-label);
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-right: 1rem;
+    flex-shrink: 0;
+  }
+  .table-periode tbody td.num:before,
+  .table-periode tbody td.text-end:before {
+    display: none;
+  }
+  /* Action buttons stay inline */
+  .table-periode tbody td.text-end {
+    justify-content: flex-end;
+  }
+  .login-logo img { max-width: 220px; }
+}
+
+/* ── RESPONSIVE: Scrollable DataTables ────────────────────────────── */
+@media (max-width: 768px) {
+  .app-card div.dataTables_wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── RESPONSIVE: Mobile tap targets & spacing ─────────────────────── */
+@media (max-width: 576px) {
+  .btn-action-modern,
+  .btn-action-sm {
+    width: 44px;
+    height: 44px;
+  }
+  .nav-pill {
+    padding: .65rem 1.25rem;
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+  /* Navbar collapsed state */
+  .navbar .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .navbar-nav {
+    width: 100%;
+    padding-top: .75rem;
+    padding-bottom: .5rem;
+  }
+  .navbar-nav .nav-item {
+    width: 100%;
+  }
+  .navbar-collapse .d-flex {
+    width: 100%;
+    justify-content: center;
+    padding-top: .5rem;
+    border-top: 1px solid var(--border);
+  }
+  .btn-danger-modern {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Sticky summary card → static on mobile */
+  .summary-card {
+    position: static;
+    margin-top: 1rem;
+  }
+
+  /* Form fields: force full width */
+  .row.g-3 .col-md-3,
+  .row.g-3 .col-md-4,
+  .row.g-3 .col-md-6 {
+    width: 100%;
+  }
+
+  /* Stat cards on smallest screens */
+  .stat-card {
+    padding: 1rem 1.25rem;
+  }
+  .stat-card .value {
+    font-size: 1.25rem;
+  }
+
+  /* Toggler & segmented btn height */
+  .navbar-toggler {
+    height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .btn-group-payroll .btn-payroll {
+    height: 44px;
+  }
+
+  /* Modal improvements */
+  .modal-modern .modal-content {
+    border-radius: 16px;
+    margin: .5rem;
+  }
+  .modal-modern .modal-body {
+    padding: 16px;
+  }
+  .modal-modern .modal-footer {
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+  .modal-modern .modal-footer .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  /* Stacked card table (generic DataTable) */
+  table.data-table:not(.table-periode) thead {
+    display: none;
+  }
+  table.data-table:not(.table-periode),
+  table.data-table:not(.table-periode) tbody,
+  table.data-table:not(.table-periode) tr,
+  table.data-table:not(.table-periode) td {
+    display: block;
+    max-width: 100%;
+  }
+  table.data-table:not(.table-periode) {
+    width: 100% !important;
+  }
+  table.data-table:not(.table-periode) tbody tr {
+    padding: .85rem .75rem;
+    margin-bottom: .75rem;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  table.data-table:not(.table-periode) tbody td {
+    padding: .3rem 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+  }
+  table.data-table:not(.table-periode) tbody td:before {
+    content: attr(data-label);
+    font-size: .65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 80px;
+  }
+  table.data-table:not(.table-periode) tbody td.text-end {
+    justify-content: flex-end;
+  }
+  table.data-table:not(.table-periode) tbody td.text-end:before {
+    display: none;
+  }
+  table.data-table:not(.table-periode) tbody td .btn-action-modern,
+  table.data-table:not(.table-periode) tbody td .btn-action-sm {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Ensure action cell wraps buttons */
+  table.data-table tbody td.text-end {
+    flex-wrap: wrap;
+    gap: .35rem;
+  }
+
+  /* Tren card full width */
+  .tren-card {
+    padding: 1rem 1.25rem;
+  }
+}
+
+/* ── RESPONSIVE: Tiny screens (≤414px) ────────────────────────────── */
+@media (max-width: 414px) {
+  /* Single-column stat cards */
+  .row.g-3.mb-4 .col-md-3,
+  .row.g-3.mb-4 .col-sm-6 {
+    width: 100%;
+  }
+
+  /* Page header: stack filter + button group */
+  .d-flex.justify-content-between.align-items-end {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .d-flex.justify-content-between.align-items-end .d-flex.gap-2 {
+    width: 100%;
+  }
+
+  /* Segmented button group full width */
+  .btn-group-payroll {
+    width: 100%;
+  }
+  .btn-group-payroll .btn-payroll {
+    flex: 1;
+    justify-content: center;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  /* Period filter full width */
+  form.d-flex.gap-2 select.form-select {
+    width: 100%;
+  }
+  form.d-flex.gap-2 {
+    width: 100%;
+  }
+}
+
+/* ── RESPONSIVE: Very small screens (≤375px) ──────────────────────── */
+@media (max-width: 375px) {
+  .brand-logo { width: 28px; height: 28px; font-size: .9rem; }
+  .btn-group-payroll .btn-payroll {
+    font-size: 11px;
+    padding: 0 6px;
+  }
+  .btn-group-payroll .btn-payroll i {
+    display: none;
+  }
+}
+

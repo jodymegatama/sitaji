@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /sitaji/
+
+    # Don't redirect broadcast AJAX endpoint — preserves POST method
+    RewriteCond %{REQUEST_URI} !/includes/mark_broadcast_read\.php [NC]
+    # Redirect external .php requests to clean URLs (301)
+    RewriteCond %{THE_REQUEST} \.php[\s?]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^(.+)\.php$ $1 [R=301,L,QSA]
+
+    # Internally map clean URLs to .php files
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^(.+)$ $1.php [L]
+</IfModule>

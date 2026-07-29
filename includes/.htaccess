@@ -1,0 +1,4 @@
+Require all denied
+<Files "mark_broadcast_read.php">
+    Require all granted
+</Files>
