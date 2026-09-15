@@ -1,4 +1,40 @@
-# Laragon local - jangan commit file VPS lokal
+# ============================================
+# .gitignore — SITAJI Production-Ready Repo
+# ============================================
+
+# --- Environment & Credentials (JANGAN COMMIT) ---
+.env
+.env.production
+.env.local
+.env.*.local
+
+# --- VPS Backup Files (config yang tidak kompatibel cross-environment) ---
 .user.ini
 .user.ini.vps.bak
 includes/db.php.vps.bak
+
+# --- Database Dumps (data sensitif pegawai, jangan di public repo) ---
+*.sql
+*.sql.gz
+*.sql.bz2
+
+# --- Local Dev Artifacts ---
+graphify-out/
+graphify-out/**
+*.log
+/tmp/
+cache/
+
+# --- IDE & OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Dependency (jika ada nanti) ---
+/vendor/
+/node_modules/

@@ -1,126 +1,190 @@
-# SITAJI (Sistem Transparansi Gaji) — Sistem Manajemen Payroll (PHP + MySQL + Bootstrap 5)
+# SITAJI — Sistem Informasi Tunjangan & Administrasi Pegawai
 
-Replikasi struktur halaman `kemenag-sitaji` (Admin &amp; Pegawai).
+> **Repository ini untuk PRODUCTION.** Hanya berisi kode aplikasi yang siap deploy. Tidak ada data sensitif, credential, atau file environment-specific.
 
-## Cara Pakai (XAMPP / Laragon)
+---
 
-1. Ekstrak folder `sitaji/` ke dalam `htdocs/` (XAMPP) atau `www/` (Laragon).
-2. Buat database baru bernama **`sitaji`** di phpMyAdmin.
-3. Import file **`sitaji.sql`** ke database tersebut.
-4. Edit kredensial DB di **`includes/db.php`** jika perlu (default: host `localhost`, user `root`, password kosong).
-5. Buka di browser: `http://localhost/sitaji/login.php`
+## 📋 Prasyarat
 
-## Akun Default
+- PHP 8.1+ (tested on 8.2.27)
+- MySQL 5.7+ atau 8.x
+- Apache + mod_rewrite (untuk clean URL)
+- aaPanel (untuk VPS) / Laragon (untuk local dev)
 
-| Role    | Username              | Password     |
-|---------|-----------------------|--------------|
-| Admin   | `admin`               | `admin123456`   |
-| Pegawai | `199401312025051004`  | `kemenag123` |
+---
 
-Pegawai baru yang ditambahkan admin otomatis mendapat password default **`kemenag123`**.
+## 🚀 Setup Local (Laragon)
 
-## Struktur File
+### 1. Clone repo
+```bash
+cd C:/laragon/www
+git clone https://github.com/jodymegatama/sitaji.git
+cd sitaji
+```
+
+### 2. Buat file `.env` (lihat `.env.example` sebagai template)
+```bash
+copy .env.example .env
+```
+Edit `.env`:
+```
+APP_ENV=local
+DB_HOST=localhost
+DB_NAME=sitaji
+DB_USER=root
+DB_PASS=
+```
+
+### 3. Import database
+Import `sitaji.sql` ke MySQL local:
+```bash
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS sitaji CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+mysql -u root sitaji < sitaji.sql
+```
+> ⚠️ File `sitaji.sql` **tidak ada di repo GitHub** (di-gitignore karena berisi data pegawai). Dapatkan file ini dari administrator sistem atau dari VPS.
+
+### 4. Akses aplikasi
+```
+http://localhost/sitaji/login
+```
+
+### Default admin login (dari database VPS):
+- Username: `admin`
+- Password: `admin123456`
+
+---
+
+## 🚀 Deploy ke VPS via aaPanel
+
+### 1. Di aaPanel: Buat site
+- **Site → Add Site**
+- Domain: `sitaji.kemenagkabpasuruan.id` (atau domain Anda)
+- PHP Version: 8.1+
+- Database: MySQL (create database `sitaji`)
+
+### 2. Clone repo ke VPS
+```bash
+cd /www/wwwroot/sitaji.kemenagkabpasuruan.id
+git clone https://github.com/jodymegatama/sitaji.git .
+```
+
+### 3. Buat file `.env` di root web
+```bash
+cat > /www/wwwroot/sitaji.kemenagkabpasuruan.id/.env << 'EOF'
+APP_ENV=production
+DB_HOST=localhost
+DB_NAME=sitaji
+DB_USER=sitaji
+DB_PASS=<password-dari-aaPanel-database>
+EOF
+chmod 600 .env
+```
+
+### 4. Import database
+```bash
+mysql -u sitaji -p sitaji < /path/to/sitaji.sql
+```
+
+### 5. Setup `.user.ini` (VPS-specific, via aaPanel)
+Di aaPanel → Site → sitaji → Config:
+```ini
+open_basedir=/www/wwwroot/sitaji.kemenagkabpasuruan.id/:/tmp/
+```
+
+### 6. Set permissions
+```bash
+chown -R www:www /www/wwwroot/sitaji.kemenagkabpasuruan.id
+chmod -R 755 /www/wwwroot/sitaji.kemenagkabpasuruan.id
+chmod 600 .env
+```
+
+---
+
+## 🔄 Workflow: Local → GitHub → VPS
+
+### A. Buat perubahan di Local
+```bash
+# Edit file di C:/laragon/www/sitaji
+# Test di http://localhost/sitaji/
+```
+
+### B. Commit & Push ke GitHub
+```bash
+cd C:/laragon/www/sitaji
+git add -A
+git commit -m "deskripsi perubahan"
+git push origin main
+```
+
+### C. Deploy ke VPS via aaPanel SSH Terminal
+```bash
+cd /www/wwwroot/sitaji.kemenagkabpasuruan.id
+git pull origin main
+```
+
+> **Pastikan `.env` dan `.user.ini` tidak akan di-overwrite oleh git pull** — keduanya sudah di `.gitignore`.
+
+---
+
+## 📁 Struktur Direktori
 
 ```
 sitaji/
-├── sitaji.sql                   # Skema MySQL + seed data
-├── login.php                     # Halaman login (Admin & Pegawai)
+├── .env.example          # Template konfigurasi (di-commit)
+├── .env                  # Konfigurasi nyata (TIDAK di-commit, local-only)
+├── .gitignore
+├── .htaccess             # Clean URL routing
+├── .user.ini             # VPS-only (TIDAK di-commit, dibuat via aaPanel)
+├── index.php             # Entry point
+├── login.php             # Halaman login
 ├── logout.php
-├── index.php                     # Redirect ke login / dashboard
-├── migrations/                   # Riwayat migrasi skema & data (001-009)
-│   ├── README.md                 # Konvensi & daftar migrasi
-│   ├── 001_normalize_kategori.php
-│   ├── 002_add_tipe_column_and_pendapatan_seed.php
-│   ├── 003_fix_potbank_label.php
-│   ├── 004_revert_potbank_and_pinjaman.php
-│   ├── 005_create_payroll_detail.php
-│   ├── 006_full_eav_payroll.php
-│   ├── 007_stakeholder_module.php
-│   ├── 008_add_is_revisi_flag.php
-│   └── 009_add_saldo_awal.php
-├── includes/
-│   ├── db.php                    # Koneksi PDO
-│   ├── auth.php                  # Session & guard role
-│   ├── helpers.php               # Format rupiah, periode, payroll_fields(), total_bruto/potongan/thp
-│   ├── header_admin.php
-│   ├── header_pegawai.php
-│   └── footer.php
-├── admin/
-│   ├── dashboard.php             # Data Payroll + statistik (termasuk LEFT JOIN payroll_detail)
-│   ├── tambah_gaji.php           # Input payroll (fixed + komponen dinamis via payroll_detail)
-│   ├── edit_gaji.php             # Edit payroll (pre-fill fixed + detail)
-│   ├── detail_gaji.php           # AJAX: audit payroll detail (fixed + dinamis)
-│   ├── hapus_gaji.php
-│   ├── export_gaji.php           # Export Excel (termasuk kolom dinamis)
-│   ├── import_gaji.php           # Import Excel (fixed kolom → payroll, kolom lain → payroll_detail)
-│   ├── manajemen_komponen_payroll.php    # CRUD komponen pendapatan/potongan + DELETE kondisional
-│   ├── pegawai.php               # Manajemen pegawai (CRUD)
-│   ├── tambah_pegawai.php
-│   ├── edit_pegawai.php
-│   └── hapus_pegawai.php
-├── pegawai/
-│   ├── dashboard.php             # Riwayat slip + statistik (dengan LEFT JOIN payroll_detail)
-│   ├── detail_slip.php           # AJAX modal slip gaji (fixed + dinamis)
-│   ├── tanda_terima.php          # Konfirmasi terima slip
-│   └── ubah_password.php
-├── stakeholder/
-│   ├── dashboard.php             # Dashboard (kartu ringkasan + grafik)
-│   ├── index.php                 # Redirect ke dashboard
-│   ├── tambah_periode.php        # Input periode baru (dengan saldo_awal)
-│   ├── daftar_periode.php        # Daftar semua periode
-│   ├── detail_periode.php        # Detail + tombol broadcast/revisi
-│   ├── edit_periode.php          # Edit periode (hanya draft)
-│   ├── broadcast_periode.php     # POST: ubah status jadi broadcast
-│   ├── ajukan_revisi.php         # POST: ajukan revisi ke admin
-│   └── laporan.php               # Endpoint export Excel (dipanggil via modal di daftar_periode)
-└── assets/
-    ├── css/style.css
-    └── js/app.js
+├── README.md             # Dokumentasi ini
+├── admin/                # Halaman admin (dashboard, pegawai, payroll, dll)
+├── pegawai/              # Halaman pegawai (dashboard, slip gaji, dll)
+├── stakeholder/          # Halaman stakeholder (laporan dana, revisi, dll)
+├── includes/             # Shared components (db, auth, helpers, header/footer)
+│   ├── db.php            # Koneksi database (baca dari .env)
+│   ├── auth.php          # Autentikasi
+│   └── helpers.php       # Helper functions
+├── assets/               # CSS, JS, images
+│   ├── css/style.css
+│   ├── js/app.js
+│   └── img/
+└── migrations/           # Database migration scripts
+    ├── README.md
+    ├── 001_normalize_kategori.php
+    └── ...
 ```
 
-## Arsitektur Komponen Payroll Dinamis
+---
 
-SITAJI menggunakan pendekatan hybrid untuk menyimpan komponen pendapatan/potongan:
+## ⚠️ Keamanan
 
-| Lapisan | Tabel / Fungsi | Peran |
-|---------|---------------|-------|
-| Metadata | `komponen_payroll` | Menyimpan definisi komponen: `field_key`, `nama`, `tipe` (`pendapatan`/`potongan`), `kategori`, `aktif`. |
-| Fixed columns | `payroll` (kolom: `gaji_pokok`, `pot_tukin`, dll.) | Menyimpan nilai komponen built-in lama — **dipertahankan untuk backward compatibility** dengan 989 baris data riwayat. |
-| EAV dinamis | `payroll_detail` (`payroll_id`, `komponen_id`, `nilai`) | Menyimpan nilai komponen baru/tambahan yang ditambahkan admin lewat UI — **tidak ada ALTER TABLE otomatis**. |
-| Query | `helpers.php::payroll_fields()` | Membaca `komponen_payroll WHERE aktif=1` → menghasilkan struktur `['pendapatan'=>[...], 'potongan_umum'=>[...], 'koperasi'=>[...]]` untuk dipakai di seluruh form, slip, dan dashboard. |
-| Total | `helpers.php::total_bruto()`, `total_potongan()`, `take_home()` | Menjumlahkan kolom fix + `_detail_sum_pendapatan` / `_detail_sum_potongan` (dari LEFT JOIN payroll_detail) tanpa double-count. |
+- **`.env`** berisi password database — **TIDAK di-commit ke git**.
+- **`.user.ini`** berisi VPS path config — **TIDAK di-commit ke git**.
+- **`sitaji.sql`** berisi data asli pegawai (NIP, password hash) — **TIDAK di-commit ke git**.
+- **`includes/db.php.vps.bak`** backup db.php lama (hardcoded password) — **TIDAK di-commit ke git**.
 
-Komponen pendapatan/potongan dapat ditambah atau dihapus dari `admin/manajemen_komponen_payroll.php`.
-Proses hapus bersifat **kondisional**:
-- **Fisik (DELETE)** — jika komponen **belum pernah dipakai** di kolom fix payroll maupun di `payroll_detail`.
-- **Soft-delete (`aktif=0`)** — jika komponen **sudah terpakai** di data riwayat (kolom fix bernilai != 0 atau ada baris di `payroll_detail`), untuk menjaga integritas data riwayat tanpa kehilangan referensi.
+**Jika password VPS pernah ter-commit ke GitHub publik, segera:**
+1. Ganti password database user `sitaji` di aaPanel
+2. Update `.env` di VPS dengan password baru
 
-Setiap kali admin menambah/mengedit payroll via `tambah_gaji.php` / `edit_gaji.php`:
-- Kolom fixed (`gaji_pokok`..`kop_pinjaman`) disimpan langsung ke tabel `payroll`.
-- Kolom non‑fixed (termasuk `pinjaman_kenakalan`, Tunjangan baru, dll.) disimpan ke `payroll_detail` dengan `ON DUPLICATE KEY UPDATE`.
-- Baris `payroll_detail` dengan nilai 0 otomatis dihapus setelah submit untuk menjaga kebersihan data.
+---
 
-## Riwayat Migrasi
+## 🔧 Troubleshooting
 
-Seluruh perubahan skema dan data tercatat di folder `migrations/` sebagai audit trail permanen.
-File migrasi **tidak boleh dihapus**; skrip yang sudah dijalankan ditandai `ALREADY EXECUTED — for record only, do not re-run`.
-Revert dilakukan dengan membuat skrip baru (bukan mengedit skrip lama), ditandai `REVERTED by NNN_nama_skrip.php`.
+| Masalah | Solusi |
+|---------|--------|
+| Blank page / 500 error | Cek `.env` ada dan readable. Cek `error_log` |
+| Login gagal | Cek `users` table ada data, password_hash valid |
+| Clean URL 404 | Cek `mod_rewrite` enabled, `.htaccess` AllowOverride All |
+| Database connection failed | Cek `.env` credentials benar, MySQL running |
 
-| # | File | Deskripsi |
-|---|------|-----------|
-| 001 | `001_normalize_kategori.php` | Normalisasi nilai kategori legacy ke 2 grup baku (Potongan Umum, Koperasi atau Bank & Pinjaman) |
-| 002 | `002_add_tipe_column_and_pendapatan_seed.php` | Tambah kolom `tipe` ENUM(`pendapatan`,`potongan`), seed 5 pendapatan dasar |
-| 003 | `003_fix_potbank_label.php` | Uji coba rename label pot_bank — **direvert** oleh 004 |
-| 004 | `004_revert_potbank_and_pinjaman.php` | Revert pot_bank + aktifkan pinjaman_kenakalan kembali |
-| 005 | `005_create_payroll_detail.php` | Buat tabel `payroll_detail` untuk komponen dinamis (FK ke payroll CASCADE, FK ke komponen RESTRICT, UNIQUE KEY payroll+komponen) |
-| 006 | `006_full_eav_payroll.php` | Migrasi Full EAV: hapus 24 kolom fix dari tabel payroll, pindahkan ke payroll_detail |
-| 007 | `007_stakeholder_module.php` | Buat modul stakeholder: tambah role ENUM, tabel pemangku_kepentingan, dana_periode, dana_pemanfaatan, dll. |
-| 008 | `008_add_is_revisi_flag.php` | Tambah kolom `is_revisi` ke dana_periode sebagai flag broadcast hasil revisi |
-| 009 | `009_add_saldo_awal.php` | Tambah kolom `saldo_awal` ke dana_periode untuk running balance antar periode |
+---
 
-## Catatan Teknis
+## 📝 Notes
 
-- **PHP**: minimal 7.4 (PDO + mysqli). Disarankan 8.0+.
-- **Frontend**: Bootstrap 5.3 + Bootstrap Icons + DataTables (CDN, tidak perlu install).
-- **Keamanan**: password di-hash (`password_hash`), prepared statement (PDO), CSRF check sederhana lewat session, role guard di setiap halaman.
-- **Validasi form**: JavaScript (`assets/js/app.js`) + validasi server-side.
+- Repository ini hanya berisi **kode aplikasi** yang siap deploy.
+- File konfigurasi environment (`.env`, `.user.ini`) dibuat manual di setiap server.
+- Database (`sitaji.sql`) dikelola terpisah, tidak di-commit ke repo.
+- Migrations (`migrations/`) di-commit dan bisa di-run untuk update schema.
