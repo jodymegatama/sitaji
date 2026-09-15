@@ -1,0 +1,4 @@
+# Laragon local - jangan commit file VPS lokal
+.user.ini
+.user.ini.vps.bak
+includes/db.php.vps.bak
