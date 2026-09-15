@@ -1,67 +1,44 @@
 <?php
-// includes/db.php — koneksi PDO MySQL (production-safe, no hardcoded credentials)
-// Baca konfigurasi dari environment variable atau file .env (di luar repo)
+// includes/db.php — koneksi PDO MySQL (auto local + VPS, no .env needed)
 declare(strict_types=1);
 
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
-/**
- * Load .env file (di luar web root, tidak di-commit ke git).
- * Format: KEY=value per baris.
- * Path优先级:
- *   1. /www/wwwroot/sitaji/.env        (VPS aaPanel, document root)
- *   2. C:/laragon/www/sitaji/.env      (local Laragon)
- *   3. __DIR__/.env                    (fallback: same dir as db.php)
- */
-function load_env(): void {
-    $candidates = [
-        '/www/wwwroot/sitaji.kemenagkabpasuruan.id/.env',  // VPS aaPanel
-        'C:/laragon/www/sitaji/.env',                       // Local Laragon
-        __DIR__ . '/../.env',                               // Relative fallback
-    ];
-    foreach ($candidates as $path) {
-        if (is_file($path) && is_readable($path)) {
-            $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if ($line === '' || str_starts_with($line, '#')) continue;
-                if (!str_contains($line, '=')) continue;
-                [$key, $val] = explode('=', $line, 2);
-                $key = trim($key);
-                $val = trim($val);
-                // Remove surrounding quotes
-                if ((str_starts_with($val, '"') && str_ends_with($val, '"')) ||
-                    (str_starts_with($val, "'") && str_ends_with($val, "'"))) {
-                    $val = substr($val, 1, -1);
-                }
-                if (!getenv($key)) {
-                    putenv("$key=$val");
-                    $_ENV[$key] = $val;
-                }
-            }
-            break;
-        }
-    }
-}
-load_env();
+// Deteksi environment berdasarkan OS
+$is_local = (PHP_OS_FAMILY === 'Windows');
 
-// Baca konfigurasi dari environment (diatur via .env file)
-$env = getenv('APP_ENV') ?: 'local';  // 'local' | 'production'
-
-if ($env === 'local' || $env === '' || PHP_OS_FAMILY === 'Windows') {
-    // Local Laragon — default root tanpa password
-    $db_host = getenv('DB_HOST') ?: 'localhost';
-    $db_name = getenv('DB_NAME') ?: 'sitaji';
-    $db_user = getenv('DB_USER') ?: 'root';
-    $db_pass = getenv('DB_PASS') ?: '';
+if ($is_local) {
+    // Laragon local: MySQL user root tanpa password
+    $db_host = 'localhost';
+    $db_name = 'sitaji';
+    $db_user = 'root';
+    $db_pass = '';
 } else {
-    // Production VPS — wajib ada di .env
-    $db_host = getenv('DB_HOST') ?: 'localhost';
-    $db_name = getenv('DB_NAME') ?: 'sitaji';
-    $db_user = getenv('DB_USER') ?: '';
-    $db_pass = getenv('DB_PASS') ?: '';
+    // VPS aaPanel (Linux): baca dari .env jika ada, fallback ke konstanta
+    $env_file = __DIR__ . '/../.env';
+    if (is_file($env_file) && is_readable($env_file)) {
+        $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $env = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#') continue;
+            if (!str_contains($line, '=')) continue;
+            [$k, $v] = explode('=', $line, 2);
+            $env[trim($k)] = trim($v);
+        }
+        $db_host = $env['DB_HOST'] ?? 'localhost';
+        $db_name = $env['DB_NAME'] ?? 'sitaji';
+        $db_user = $env['DB_USER'] ?? 'sitaji';
+        $db_pass = $env['DB_PASS'] ?? '';
+    } else {
+        // Fallback jika .env tidak ada
+        $db_host = 'localhost';
+        $db_name = 'sitaji';
+        $db_user = 'sitaji';
+        $db_pass = '';
+    }
 }
 
 try {
