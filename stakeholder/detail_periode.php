@@ -30,6 +30,11 @@ $revisiPending = $pdo->prepare("SELECT COUNT(*) FROM dana_revisi_request WHERE p
 $revisiPending->execute([$id]);
 $hasRevisiPending = (int)$revisiPending->fetchColumn() > 0;
 
+// Cek apakah ada hapus pending
+$hapusPending = $pdo->prepare("SELECT COUNT(*) FROM dana_hapus_request WHERE periode_id = ? AND status = 'pending'");
+$hapusPending->execute([$id]);
+$hasHapusPending = (int)$hapusPending->fetchColumn() > 0;
+
 $bulanNama = [
     1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
     5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
@@ -39,6 +44,7 @@ $statusBadge = [
     'draft' => 'bg-secondary',
     'broadcast' => 'bg-success',
     'revisi_pending' => 'bg-warning text-dark',
+    'hapus_pending' => 'bg-danger',
 ];
 
 // Flash messages
@@ -51,8 +57,11 @@ elseif ($error === 'revisi_failed') { $flashMsg = 'Gagal mengajukan revisi.'; $f
 elseif ($error === 'revisi_empty') { $flashMsg = 'Data revisi tidak boleh kosong.'; $flashType = 'danger'; }
 elseif ($error === 'pemanfaatan_over') { $flashMsg = 'Total pemanfaatan melebihi total pemasukan.'; $flashType = 'danger'; }
 elseif ($error === 'nominal_over') { $flashMsg = 'Nominal terlalu besar. Maksimal 9.999.999.999.999 (13 digit).'; $flashType = 'danger'; }
+elseif ($error === 'hapus_empty') { $flashMsg = 'Alasan penghapusan tidak boleh kosong.'; $flashType = 'danger'; }
+elseif ($error === 'hapus_failed') { $flashMsg = 'Gagal mengajukan penghapusan.'; $flashType = 'danger'; }
 elseif ($success === 'broadcast') { $flashMsg = 'Periode berhasil di-broadcast ke pegawai dan admin.'; $flashType = 'success'; }
 elseif ($success === 'revisi_submitted') { $flashMsg = 'Revisi berhasil diajukan. Menunggu persetujuan admin.'; $flashType = 'info'; }
+elseif ($success === 'hapus_submitted') { $flashMsg = 'Penghapusan berhasil diajukan. Menunggu persetujuan admin.'; $flashType = 'info'; }
 ?>
 
 <div class="d-flex align-items-center gap-3 mb-4">
@@ -62,6 +71,9 @@ elseif ($success === 'revisi_submitted') { $flashMsg = 'Revisi berhasil diajukan
     <span class="badge <?= $statusBadge[$periode['status']] ?> mt-1"><?= ucfirst(str_replace('_', ' ', $periode['status'])) ?></span>
     <?php if ($hasRevisiPending): ?>
       <span class="badge bg-info text-dark ms-1">Revisi Pending</span>
+    <?php endif; ?>
+    <?php if ($hasHapusPending): ?>
+      <span class="badge bg-danger ms-1">Penghapusan Pending</span>
     <?php endif; ?>
   </div>
 </div>
@@ -137,13 +149,24 @@ elseif ($success === 'revisi_submitted') { $flashMsg = 'Revisi berhasil diajukan
     <button type="submit" class="btn-success-modern"><i class="bi bi-broadcast"></i> Broadcast ke Pegawai</button>
   </form>
 </div>
-<?php elseif ($periode['status'] === 'broadcast' && !$hasRevisiPending): ?>
-<div class="mt-4">
+<?php elseif ($periode['status'] === 'broadcast' && !$hasRevisiPending && !$hasHapusPending): ?>
+<div class="mt-4 d-flex gap-2">
   <button class="btn-primary-modern" data-bs-toggle="modal" data-bs-target="#revisiModal"><i class="bi bi-pencil-square"></i> Ajukan Revisi</button>
+  <button class="btn-danger-modern" data-bs-toggle="modal" data-bs-target="#hapusModal"
+          data-id="<?= $id ?>"
+          data-periode="<?= e($bulanNama[(int)$periode['bulan']] . ' ' . $periode['tahun']) ?>"
+          data-pemasukan="<?= rupiah($periode['total_pemasukan']) ?>"
+          data-pemanfaatan="<?= rupiah($totalPemanfaatan) ?>">
+    <i class="bi bi-trash"></i> Ajukan Penghapusan
+  </button>
 </div>
 <?php elseif ($periode['status'] === 'revisi_pending'): ?>
 <div class="mt-3">
   <div class="alert alert-info mb-0"><i class="bi bi-hourglass-split"></i> Revisi sedang dalam proses persetujuan admin.</div>
+</div>
+<?php elseif ($periode['status'] === 'hapus_pending'): ?>
+<div class="mt-3">
+  <div class="alert alert-danger mb-0"><i class="bi bi-hourglass-split"></i> Penghapusan periode sedang dalam proses persetujuan admin.</div>
 </div>
 <?php endif; ?>
 
@@ -290,6 +313,66 @@ elseif ($success === 'revisi_submitted') { $flashMsg = 'Revisi berhasil diajukan
   modalEl.addEventListener('shown.bs.modal', recalc);
   modalEl.addEventListener('hidden.bs.modal', function() { location.reload(); });
 })();
+</script>
+<?php endif; ?>
+
+<?php if ($periode['status'] === 'broadcast' && !$hasRevisiPending && !$hasHapusPending): ?>
+<!-- ── MODAL AJUKAN PENGHAPUSAN ── -->
+<div class="modal fade" id="hapusModal" tabindex="-1" aria-label="Ajukan Penghapusan Periode">
+<div class="modal-dialog modal-dialog-centered"><div class="modal-content modal-modern">
+  <form method="post" action="ajukan_hapus">
+    <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
+    <input type="hidden" name="periode_id" value="<?= $id ?>">
+    <div class="modal-header">
+      <h5 class="modal-title fw-bold">Ajukan Penghapusan Periode</h5>
+      <button class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Peringatan:</strong> Penghapusan akan menghapus <strong>seluruh data</strong>
+        periode ini secara permanen setelah disetujui admin, termasuk rincian pemanfaatan
+        dan status baca notifikasi pegawai. Data tidak dapat dikembalikan.
+      </div>
+      <div class="mb-3">
+        <div class="small text-muted mb-1">Periode</div>
+        <div class="fw-bold" id="hapusPeriodeLabel"></div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-6">
+          <div class="small text-muted">Total Pemasukan</div>
+          <div class="fw-bold text-success" id="hapusPemasukanLabel"></div>
+        </div>
+        <div class="col-6">
+          <div class="small text-muted">Total Pemanfaatan</div>
+          <div class="fw-bold text-danger" id="hapusPemanfaatanLabel"></div>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="alasanHapus" class="form-label fw-semibold small text-uppercase text-muted">
+          Alasan Penghapusan <span class="text-danger">*</span>
+        </label>
+        <textarea id="alasanHapus" class="form-control" name="alasan" rows="3"
+                  placeholder="Jelaskan alasan penghapusan periode ini..." required></textarea>
+      </div>
+    </div>
+    <div class="modal-footer border-0 d-flex gap-2">
+      <button type="button" class="btn-secondary-modern" data-bs-dismiss="modal">Batal</button>
+      <button class="btn-danger-modern" type="submit">
+        <i class="bi bi-trash"></i> Kirim Pengajuan
+      </button>
+    </div>
+  </form>
+</div></div></div>
+
+<script>
+document.getElementById('hapusModal').addEventListener('show.bs.modal', function(event) {
+  var btn = event.relatedTarget;
+  this.querySelector('[name="periode_id"]').value = btn.getAttribute('data-id');
+  document.getElementById('hapusPeriodeLabel').textContent = btn.getAttribute('data-periode');
+  document.getElementById('hapusPemasukanLabel').textContent = btn.getAttribute('data-pemasukan');
+  document.getElementById('hapusPemanfaatanLabel').textContent = btn.getAttribute('data-pemanfaatan');
+});
 </script>
 <?php endif; ?>
 

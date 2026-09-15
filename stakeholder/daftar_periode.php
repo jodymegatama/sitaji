@@ -104,6 +104,7 @@ if (!$flashMsg) {
     elseif ($success === 'updated') { $flashMsg = 'Periode berhasil diperbarui.'; $flashType = 'success'; }
     elseif ($success === 'broadcast') { $flashMsg = 'Periode berhasil di-broadcast ke pegawai dan admin.'; $flashType = 'success'; }
     elseif ($success === 'revisi_submitted') { $flashMsg = 'Revisi berhasil diajukan. Menunggu persetujuan admin.'; $flashType = 'info'; }
+    elseif ($success === 'hapus_submitted') { $flashMsg = 'Penghapusan berhasil diajukan. Menunggu persetujuan admin.'; $flashType = 'info'; }
 }
 
 $bulanNama = [
@@ -115,6 +116,7 @@ $statusBadge = [
     'draft' => 'bg-secondary',
     'broadcast' => 'bg-success',
     'revisi_pending' => 'bg-warning text-dark',
+    'hapus_pending' => 'bg-danger',
 ];
 $bulanSingkat = [
     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',

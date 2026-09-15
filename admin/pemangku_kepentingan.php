@@ -53,6 +53,34 @@ $historyList = $pdo->query("
     LIMIT 50
 ")->fetchAll();
 
+// === Tab 3: Approval Penghapusan ===
+$hapusPendingList = $pdo->query("
+    SELECT hr.id AS hapus_id, hr.periode_id, hr.alasan, hr.status,
+           hr.created_at, hr.diproses_at, hr.catatan_admin,
+           hr.periode_label, hr.nama_pemangku, hr.total_pemasukan, hr.total_pemanfaatan,
+           dp.status AS periode_status,
+           u.username AS diajukan_username
+    FROM dana_hapus_request hr
+    LEFT JOIN dana_periode dp ON dp.id = hr.periode_id
+    JOIN users u ON u.id = hr.diajukan_oleh
+    WHERE hr.status = 'pending'
+    ORDER BY hr.created_at ASC
+")->fetchAll();
+$totalHapusPending = count($hapusPendingList);
+
+$hapusHistoryList = $pdo->query("
+    SELECT hr.id AS hapus_id, hr.status, hr.created_at, hr.diproses_at, hr.catatan_admin,
+           hr.periode_label, hr.nama_pemangku, hr.total_pemasukan, hr.total_pemanfaatan,
+           u.username AS diajukan_username,
+           admin.username AS diproses_username
+    FROM dana_hapus_request hr
+    JOIN users u ON u.id = hr.diajukan_oleh
+    LEFT JOIN users admin ON admin.id = hr.disetujui_oleh
+    WHERE hr.status != 'pending'
+    ORDER BY hr.diproses_at DESC
+    LIMIT 50
+")->fetchAll();
+
 // === Flash messages (gabungan dari kedua sistem) ===
 $error = $_GET['error'] ?? '';
 $success = $_GET['success'] ?? '';
@@ -76,6 +104,8 @@ elseif ($success === 'deleted') { $flashMsg = 'Pemangku kepentingan berhasil dih
 elseif ($success === 'toggled') { $flashMsg = 'Status akun pemangku kepentingan berhasil diubah.'; $flashType = 'success'; }
 elseif ($success === 'approved') { $flashMsg = 'Revisi berhasil disetujui dan diterapkan.'; $flashType = 'success'; }
 elseif ($success === 'rejected') { $flashMsg = 'Revisi berhasil ditolak.'; $flashType = 'info'; }
+elseif ($success === 'hapus_approved') { $flashMsg = 'Penghapusan periode disetujui. Data telah dihapus permanen.'; $flashType = 'success'; }
+elseif ($success === 'hapus_rejected') { $flashMsg = 'Penghapusan periode ditolak. Data periode dikembalikan.'; $flashType = 'info'; }
 
 $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',
               7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
@@ -109,6 +139,14 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
       <i class="bi bi-check2-square me-1"></i> Approval Revisi
       <?php if ($totalPending > 0): ?>
       <span class="badge bg-warning text-dark ms-1"><?= $totalPending ?></span>
+      <?php endif; ?>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link <?= $activeTab === 'hapus' ? 'active' : '' ?>" href="?tab=hapus">
+      <i class="bi bi-trash3 me-1"></i> Approval Penghapusan
+      <?php if ($totalHapusPending > 0): ?>
+      <span class="badge bg-danger ms-1"><?= $totalHapusPending ?></span>
       <?php endif; ?>
     </a>
   </li>
@@ -317,6 +355,119 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
           <tr>
             <td class="fw-semibold"><?= e($h['nama_pemangku']) ?></td>
             <td><?= $bulanNama[(int)$h['bulan']] ?> <?= $h['tahun'] ?></td>
+            <td>
+              <?php if ($h['status'] === 'disetujui'): ?>
+                <span class="badge bg-success">Disetujui</span>
+              <?php else: ?>
+                <span class="badge bg-danger">Ditolak</span>
+              <?php endif; ?>
+            </td>
+            <td class="small"><?= date('d M Y H:i', strtotime($h['created_at'])) ?></td>
+            <td class="small"><?= $h['diproses_at'] ? date('d M Y H:i', strtotime($h['diproses_at'])) : '-' ?></td>
+            <td class="small"><?= e($h['diproses_username'] ?? '-') ?></td>
+            <td class="small" style="max-width:200px"><?= e($h['catatan_admin'] ?? '-') ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
+  </div>
+
+  <!-- Tab: Approval Penghapusan -->
+  <div class="tab-pane fade <?= $activeTab === 'hapus' ? 'show active' : '' ?>" id="hapus">
+    <?php if ($totalHapusPending === 0): ?>
+    <div class="app-card">
+      <div class="text-center py-5">
+        <i class="bi bi-check-circle text-success" style="font-size:3rem"></i>
+        <p class="text-muted mt-3 mb-0">Tidak ada penghapusan yang menunggu persetujuan.</p>
+      </div>
+    </div>
+    <?php else: ?>
+    <?php foreach ($hapusPendingList as $hapus):
+        $hapusId = (int)$hapus['hapus_id'];
+    ?>
+    <div class="app-card mb-4" style="border-left:4px solid var(--danger,#dc3545)">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+          <h5 class="fw-bold mb-1">
+            <i class="bi bi-building text-primary me-1"></i> <?= e($hapus['nama_pemangku']) ?>
+            <span class="text-muted fw-normal">—</span>
+            <?= e($hapus['periode_label']) ?>
+          </h5>
+          <div class="text-muted small">
+            Diajukan oleh <strong><?= e($hapus['diajukan_username']) ?></strong>
+            pada <?= date('d M Y H:i', strtotime($hapus['created_at'])) ?>
+          </div>
+          <div class="mt-2">
+            <span class="badge bg-danger"><i class="bi bi-clock"></i> Menunggu Persetujuan Penghapusan</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3 p-3 rounded" style="background:#fef2f2;border:1px solid #fecaca">
+        <div class="small fw-semibold text-muted text-uppercase mb-1">Alasan Penghapusan</div>
+        <div class="small"><?= nl2br(e($hapus['alasan'] ?? '-')) ?></div>
+      </div>
+
+      <div class="mt-3">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="small text-muted">Total Pemasukan</div>
+            <div class="fw-bold text-success fs-5"><?= rupiah($hapus['total_pemasukan']) ?></div>
+          </div>
+          <div class="col-md-6">
+            <div class="small text-muted">Total Pemanfaatan</div>
+            <div class="fw-bold text-danger fs-5"><?= rupiah($hapus['total_pemanfaatan']) ?></div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning small mb-3">
+          <i class="bi bi-exclamation-triangle"></i>
+          Menyetujui akan menghapus <strong>seluruh data periode</strong> secara permanen
+          (rincian pemanfaatan, notifikasi dibaca, riwayat revisi). Tidak dapat dibatalkan.
+        </div>
+
+        <form method="post" action="approve_hapus" data-validate novalidate>
+          <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
+          <input type="hidden" name="hapus_id" value="<?= $hapusId ?>">
+          <input type="hidden" name="action" value="approve">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-uppercase text-muted">
+              Catatan Admin (opsional untuk setujui, wajib untuk tolak)
+            </label>
+            <textarea class="form-control" name="catatan_admin" rows="2"
+                      placeholder="Catatan untuk pemangku kepentingan..."></textarea>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger" style="border-radius:999px;padding:8px 20px">
+              <i class="bi bi-check-circle"></i> Setujui Penghapusan
+            </button>
+            <button type="button" class="btn btn-secondary" style="border-radius:999px;padding:8px 20px"
+                    onclick="if(confirm('Tolak penghapusan ini? Data periode akan dikembalikan ke broadcast.')){this.closest('form').querySelector('input[name=action]').value='reject';this.closest('form').submit();}">
+              <i class="bi bi-x-circle"></i> Tolak
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php if (!empty($hapusHistoryList)): ?>
+    <div class="app-card mt-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-muted"></i> Riwayat Penghapusan</h5>
+      </div>
+      <table class="table data-table align-middle" data-empty-message="Belum ada riwayat penghapusan.">
+        <thead>
+          <tr><th>Pemangku</th><th>Periode</th><th>Status</th><th>Diajukan</th><th>Diproses</th><th>Oleh</th><th>Catatan</th></tr>
+        </thead>
+        <tbody>
+          <?php foreach ($hapusHistoryList as $h): ?>
+          <tr>
+            <td class="fw-semibold"><?= e($h['nama_pemangku']) ?></td>
+            <td><?= e($h['periode_label']) ?></td>
             <td>
               <?php if ($h['status'] === 'disetujui'): ?>
                 <span class="badge bg-success">Disetujui</span>
