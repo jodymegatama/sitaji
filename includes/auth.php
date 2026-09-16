@@ -33,10 +33,19 @@ function require_role(string|array $role): void {
 
 function base_url(string $path = ''): string {
     $name = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
-    // Windows: jika SCRIPT_NAME berisi filesystem path (C:/...),
-    // konversi ke web path dengan memotong DOCUMENT_ROOT prefix
+    $root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
+
+    // aaPanel Nginx VPS auto-detection: DOCUMENT_ROOT starts with /www/wwwroot/
+    if (str_starts_with($root, '/www/wwwroot/')) {
+        $dir = rtrim(dirname($name), '/');
+        if (preg_match('#/(admin|pegawai|stakeholder)$#', $dir)) {
+            $dir = preg_replace('#/(admin|pegawai|stakeholder)$#', '', $dir);
+        }
+        return $dir . '/' . ltrim($path, '/');
+    }
+
+    // Default (Laragon Apache local):
     if (preg_match('#^[A-Za-z]:/#', $name)) {
-        $root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
         if ($root !== '' && str_starts_with($name, $root)) {
             $name = substr($name, strlen($root));
         } else {
@@ -44,7 +53,6 @@ function base_url(string $path = ''): string {
         }
     }
     $dir = rtrim(dirname($name), '/');
-    // Naikkan ke root proyek jika file berada di /admin atau /pegawai
     if (preg_match('#/(admin|pegawai|stakeholder)$#', $dir)) {
         $dir = preg_replace('#/(admin|pegawai|stakeholder)$#', '', $dir);
     }
