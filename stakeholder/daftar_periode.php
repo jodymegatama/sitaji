@@ -215,7 +215,7 @@ if ($filterAktif) {
               </span>
             </td>
             <td class="text-end pe-4" data-label="Aksi">
-              <a class="btn-action-modern" href="detail_periode?id=<?= $row['id'] ?>" title="Detail"><i class="bi bi-eye"></i></a>
+              <a class="btn-action-modern" href="<?= base_url('stakeholder/detail_periode') ?>?id=<?= $row['id'] ?>" title="Detail"><i class="bi bi-eye"></i></a>
               <?php if ($row['status'] === 'draft'): ?>
               <a class="btn-action-modern" href="edit_periode?id=<?= $row['id'] ?>" title="Edit"><i class="bi bi-pencil"></i></a>
               <button type="button" class="btn-action-modern text-danger" title="Hapus"
