@@ -62,10 +62,12 @@ foreach ($unreadPeriods as $up) {
     $periodIds[] = $pid;
 
     // Rincian pemanfaatan
-    $rStmt = $pdo->prepare("SELECT keterangan, nominal FROM dana_pemanfaatan WHERE periode_id = ? ORDER BY id ASC");
+    $rStmt = $pdo->prepare("SELECT keterangan, nominal, lampiran FROM dana_pemanfaatan WHERE periode_id = ? ORDER BY id ASC");
     $rStmt->execute([$pid]);
     $rincian = $rStmt->fetchAll();
     $totalPem = array_sum(array_column($rincian, 'nominal'));
+    $lampCount = 0;
+    foreach ($rincian as $rr) { if (!empty($rr['lampiran'])) $lampCount++; }
 
     // Flag eksplisit dari kolom is_revisi (di-set oleh approve_revisi.php)
     $isRevisi = (int)$up['is_revisi'] === 1;
@@ -75,6 +77,7 @@ foreach ($unreadPeriods as $up) {
         'total_pem' => $totalPem,
         'sisa' => (float)$up['total_pemasukan'] - $totalPem,
         'is_revisi' => $isRevisi,
+        'lamp_count' => $lampCount,
         'label_bulan' => $bulanNama[(int)$up['bulan']] . ' ' . $up['tahun'],
     ];
 }
@@ -118,6 +121,9 @@ $displayedIdsJson = json_encode($periodIds);
                   <?php if ($d['is_revisi']): ?>
                     <span class="badge bg-warning text-dark ms-1"><i class="bi bi-pencil-square"></i> Revisi</span>
                   <?php endif; ?>
+                  <?php if ($d['lamp_count'] > 0): ?>
+                    <span class="badge bg-light text-dark border ms-1"><i class="bi bi-paperclip"></i> <?= $d['lamp_count'] ?> lampiran</span>
+                  <?php endif; ?>
                 </div>
               </button>
             </h2>
@@ -139,12 +145,19 @@ $displayedIdsJson = json_encode($periodIds);
                 </div>
                 <?php if (!empty($d['rincian'])): ?>
                 <table class="table table-sm mb-0" style="font-size:.85rem">
-                  <thead><tr><th>Keterangan</th><th class="text-end">Nominal</th></tr></thead>
+                  <thead><tr><th>Keterangan</th><th class="text-end">Nominal</th><?php if ($d['lamp_count'] > 0): ?><th class="text-center" style="width:90px">Lampiran</th><?php endif; ?></tr></thead>
                   <tbody>
                     <?php foreach ($d['rincian'] as $r): ?>
                     <tr>
                       <td><?= e($r['keterangan']) ?></td>
                       <td class="text-end"><?= rupiah($r['nominal']) ?></td>
+                      <?php if ($d['lamp_count'] > 0): ?>
+                      <td class="text-center">
+                        <?php if (!empty($r['lampiran'])): ?>
+                          <a href="../uploads/lampiran/<?= e($r['lampiran']) ?>" target="_blank" rel="noopener" class="text-primary text-decoration-none" title="Buka lampiran PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                        <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                      </td>
+                      <?php endif; ?>
                     </tr>
                     <?php endforeach; ?>
                   </tbody>

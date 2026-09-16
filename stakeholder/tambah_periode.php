@@ -47,6 +47,14 @@ $totalPemasukan = (float)($_POST['total_pemasukan'] ?? 0);
 $rincianKeterangan = $_POST['rincian_keterangan'] ?? [];
 $rincianNominal = $_POST['rincian_nominal'] ?? [];
 
+// Validasi: jika POST kosong total, kemungkinan file melebihi post_max_size
+if (empty($_POST)) {
+    $_SESSION['flash_message'] = 'Ukuran file lampiran melebihi batas maksimum server (post_max_size). Perkecil file atau hubungi admin.';
+    $_SESSION['flash_type'] = 'danger';
+    header('Location: daftar_periode?modal=tambah');
+    exit;
+}
+
 // Validasi dasar
 if ($bulan < 1 || $bulan > 12 || $tahun < 2020) {
     $_SESSION['flash_message'] = 'Data tidak lengkap. Bulan, tahun, dan total pemasukan wajib diisi.';
@@ -69,6 +77,11 @@ if ($totalPemasukan > 9999999999999) {
 
 // Bangun array rincian yang valid
 $rincian = [];
+$uploadDir = __DIR__ . '/../uploads/lampiran/';
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
+
 for ($i = 0; $i < count($rincianKeterangan); $i++) {
     $ket = trim($rincianKeterangan[$i] ?? '');
     $nom = (float)($rincianNominal[$i] ?? 0);
@@ -79,7 +92,37 @@ for ($i = 0; $i < count($rincianKeterangan); $i++) {
             header('Location: daftar_periode?modal=tambah');
             exit;
         }
-        $rincian[] = ['keterangan' => $ket, 'nominal' => $nom];
+        $lampiran = null;
+        // Proses file lampiran PDF (opsional per baris)
+        if (isset($_FILES['rincian_lampiran']['name'][$i]) && $_FILES['rincian_lampiran']['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+            $fErr = $_FILES['rincian_lampiran']['error'][$i];
+            if ($fErr !== UPLOAD_ERR_OK) {
+                $_SESSION['flash_message'] = 'Gagal mengunggah lampiran baris ke-' . ($i + 1) . '. Kode error: ' . $fErr;
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: daftar_periode?modal=tambah');
+                exit;
+            }
+            // Validasi MIME type (tidak percaya header browser)
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($_FILES['rincian_lampiran']['tmp_name'][$i]);
+            if ($mime !== 'application/pdf') {
+                $_SESSION['flash_message'] = 'Lampiran baris ke-' . ($i + 1) . ' harus berupa file PDF.';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: daftar_periode?modal=tambah');
+                exit;
+            }
+            // Nama unik + aman
+            $ext = 'pdf';
+            $safeName = date('Ymd') . '_' . uniqid() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            if (!move_uploaded_file($_FILES['rincian_lampiran']['tmp_name'][$i], $uploadDir . $safeName)) {
+                $_SESSION['flash_message'] = 'Gagal menyimpan file lampiran baris ke-' . ($i + 1) . '.';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: daftar_periode?modal=tambah');
+                exit;
+            }
+            $lampiran = $safeName;
+        }
+        $rincian[] = ['keterangan' => $ket, 'nominal' => $nom, 'lampiran' => $lampiran];
     }
 }
 
@@ -107,9 +150,9 @@ try {
         ->execute([$pkId, $bulan, $tahun, $totalPemasukan, $saldoAwal]);
     $periodeId = (int)$pdo->lastInsertId();
 
-    $stmt = $pdo->prepare("INSERT INTO dana_pemanfaatan (periode_id, keterangan, nominal) VALUES (?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO dana_pemanfaatan (periode_id, keterangan, nominal, lampiran) VALUES (?, ?, ?, ?)");
     foreach ($rincian as $r) {
-        $stmt->execute([$periodeId, $r['keterangan'], $r['nominal']]);
+        $stmt->execute([$periodeId, $r['keterangan'], $r['nominal'], $r['lampiran']]);
     }
 
     $pdo->commit();

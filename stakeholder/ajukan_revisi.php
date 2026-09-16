@@ -15,7 +15,13 @@ $periodeId = (int)($_POST['periode_id'] ?? 0);
 $totalPemasukan = (float)($_POST['total_pemasukan'] ?? 0);
 $rincianKeterangan = $_POST['rincian_keterangan'] ?? [];
 $rincianNominal = $_POST['rincian_nominal'] ?? [];
+$rincianLampiranLama = $_POST['rincian_lampiran_lama'] ?? [];
 $alasan = trim($_POST['alasan'] ?? '');
+
+if (empty($_POST)) {
+    header('Location: detail_periode?id=' . $periodeId . '&error=post_too_large');
+    exit;
+}
 
 if ($periodeId <= 0 || $pkId <= 0) {
     header('Location: daftar_periode');
@@ -34,6 +40,9 @@ if ($totalPemasukan > 9999999999999) {
 
 // Bangun array rincian yang valid
 $rincian = [];
+$uploadDir = __DIR__ . '/../uploads/lampiran/';
+if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
 for ($i = 0; $i < count($rincianKeterangan); $i++) {
     $ket = trim($rincianKeterangan[$i] ?? '');
     $nom = (float)($rincianNominal[$i] ?? 0);
@@ -42,7 +51,33 @@ for ($i = 0; $i < count($rincianKeterangan); $i++) {
             header('Location: detail_periode?id=' . $periodeId . '&error=nominal_over');
             exit;
         }
-        $rincian[] = ['keterangan' => $ket, 'nominal' => $nom];
+        $lampiran = null;
+        if (isset($_FILES['rincian_lampiran']['name'][$i]) && $_FILES['rincian_lampiran']['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+            $fErr = $_FILES['rincian_lampiran']['error'][$i];
+            if ($fErr !== UPLOAD_ERR_OK) {
+                header('Location: detail_periode?id=' . $periodeId . '&error=upload');
+                exit;
+            }
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($_FILES['rincian_lampiran']['tmp_name'][$i]);
+            if ($mime !== 'application/pdf') {
+                header('Location: detail_periode?id=' . $periodeId . '&error=not_pdf');
+                exit;
+            }
+            $safeName = date('Ymd') . '_' . uniqid() . '_' . bin2hex(random_bytes(4)) . '.pdf';
+            if (!move_uploaded_file($_FILES['rincian_lampiran']['tmp_name'][$i], $uploadDir . $safeName)) {
+                header('Location: detail_periode?id=' . $periodeId . '&error=upload');
+                exit;
+            }
+            $lampiran = $safeName;
+        } else {
+            // Tidak ada file baru → pertahankan lampiran lama (jika nama valid & file masih ada)
+            $lama = basename(trim((string)($rincianLampiranLama[$i] ?? '')));
+            if ($lama !== '' && preg_match('/^[A-Za-z0-9_.\-]+\.pdf$/', $lama) && file_exists($uploadDir . $lama)) {
+                $lampiran = $lama;
+            }
+        }
+        $rincian[] = ['keterangan' => $ket, 'nominal' => $nom, 'lampiran' => $lampiran];
     }
 }
 

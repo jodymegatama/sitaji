@@ -18,9 +18,11 @@ includes/db.php.vps.bak
 *.sql.gz
 *.sql.bz2
 
-# --- Local Dev Artifacts ---
+# --- Local Dev & Upload Artifacts ---
 graphify-out/
 graphify-out/**
+/uploads/
+uploads/
 *.log
 /tmp/
 cache/

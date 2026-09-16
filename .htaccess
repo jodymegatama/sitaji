@@ -1,26 +1,20 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Support both http://localhost/sitaji/ (RewriteBase /sitaji/) dan http://sitaji/ (vhost DocumentRoot = sitaji, base = /)
-    # Redirect .php -> clean URL: handle via HTTP_HOST
+    # Clean URL routing — kompatibel untuk:
+    #   - local:  http://localhost/sitaji/...  (prefix /sitaji)
+    #   - local:  http://sitaji/...            (vhost, prefix /)
+    #   - produksi: https://sitaji.kemenagkabpasuruan.id/...  (prefix /)
+    #
+    # Redirect .php -> clean URL HANYA untuk GET/HEAD.
+    # POST/PUT/DELETE (AJAX & form) tidak boleh di-redirect: 301 mengubah
+    # method menjadi GET dan menghapus request body.
+    RewriteCond %{REQUEST_METHOD} !^(POST|PUT|DELETE)$ [NC]
+    RewriteCond %{THE_REQUEST} \s(/.+?)\.php[\s?] [NC]
+    RewriteRule ^ %1 [R=301,L,QSA]
 
-    # Don't redirect broadcast AJAX endpoint — preserves POST method
-    RewriteCond %{REQUEST_URI} !/includes/mark_broadcast_read\.php [NC]
-
-    # Untuk akses via http://sitaji/ (vhost)
-    RewriteCond %{HTTP_HOST} ^sitaji(\.test)?$ [NC]
-    RewriteCond %{THE_REQUEST} \.php[\s?]
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^(.+)\.php$ /$1 [R=301,L,QSA]
-
-    # Untuk akses via http://localhost/sitaji/
-    RewriteCond %{HTTP_HOST} !^sitaji(\.test)?$ [NC]
-    RewriteCond %{THE_REQUEST} \.php[\s?]
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^(.+)\.php$ /sitaji/$1 [R=301,L,QSA]
-
-    # Internal map clean URL -> .php (work for both, relative to .htaccess dir)
+    # Internal map clean URL -> .php (relatif ke direktori .htaccess, prefix-agnostic)
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteCond %{REQUEST_FILENAME}\.php -f
     RewriteRule ^(.+)$ $1.php [L]
 </IfModule>

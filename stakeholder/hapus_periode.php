@@ -35,6 +35,16 @@ $namaPeriode = date('F', mktime(0, 0, 0, (int)$periode['bulan'], 1)) . ' ' . $pe
 
 try {
     $pdo->beginTransaction();
+    
+    // Cleanup: hapus file lampiran sebelum hapus record
+    $stmtLamp = $pdo->prepare("SELECT lampiran FROM dana_pemanfaatan WHERE periode_id = ? AND lampiran IS NOT NULL");
+    $stmtLamp->execute([$id]);
+    $files = $stmtLamp->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($files as $file) {
+        $path = __DIR__ . '/../uploads/lampiran/' . $file;
+        if (file_exists($path)) unlink($path);
+    }
+
     $pdo->prepare("DELETE FROM dana_pemanfaatan WHERE periode_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM dana_periode WHERE id = ?")->execute([$id]);
     $pdo->commit();

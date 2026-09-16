@@ -253,88 +253,119 @@ if ($filterAktif) {
 </div></div></div>
 
 <!-- ── MODAL TAMBAH PERIODE ── -->
-<div class="modal fade" id="tambahPeriodeModal" tabindex="-1" aria-label="Tambah Periode Dana"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content modal-modern">
-  <form method="post" action="tambah_periode" data-validate novalidate id="formTambahPeriode">
+<div class="modal fade" id="tambahPeriodeModal" tabindex="-1" aria-label="Tambah Periode Dana"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 shadow-lg" style="border-radius:1rem;overflow:hidden;">
+  <form method="post" action="tambah_periode" data-validate novalidate id="formTambahPeriode" enctype="multipart/form-data">
     <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
-    <div class="modal-header">
-      <h5 class="modal-title fw-bold">Tambah Periode Dana</h5>
-      <button class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-header px-4 py-3 bg-light border-bottom">
+      <div class="d-flex align-items-center gap-2">
+        <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:38px;height:38px;background:var(--primary-soft);color:var(--primary);">
+          <i class="bi bi-calendar-plus fs-5"></i>
+        </span>
+        <div>
+          <h5 class="modal-title fw-bold mb-0">Tambah Periode Dana</h5>
+          <small class="text-muted">Masukkan data pemasukan dan rincian pemanfaatan bulanan</small>
+        </div>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
     </div>
-    <div class="modal-body">
-      <div class="row g-3 mb-4">
-        <div class="col-md-4">
-          <label for="tpBulan" class="form-label fw-semibold small text-uppercase text-muted">Bulan</label>
-          <select id="tpBulan" class="form-select" name="bulan" required>
-            <option value="">-- Pilih Bulan --</option>
-            <?php for ($m = 1; $m <= 12; $m++): ?>
-              <option value="<?= $m ?>"><?= date('F', mktime(0,0,0,$m,1)) ?></option>
-            <?php endfor; ?>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <label for="tpTahun" class="form-label fw-semibold small text-uppercase text-muted">Tahun</label>
-          <select id="tpTahun" class="form-select" name="tahun" required>
-            <option value="">-- Pilih Tahun --</option>
-            <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-              <option value="<?= $y ?>"><?= $y ?></option>
-            <?php endfor; ?>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <label for="modalTotalPemasukan" class="form-label fw-semibold small text-uppercase text-muted">Total Pemasukan (Rp)</label>
-          <input type="number" class="form-control" name="total_pemasukan" id="modalTotalPemasukan" placeholder="0" min="0" max="9999999999999" step="1000" required>
-        </div>
-      </div>
-      <div class="row g-3 mb-4">
-        <div class="col-md-6">
-          <label for="modalSaldoAwalDisplay" class="form-label fw-semibold small text-uppercase text-muted">Saldo Awal (Carry-over)</label>
-          <input type="text" class="form-control" id="modalSaldoAwalDisplay" value="<?= rupiah($saldoAwalCarryOver) ?>" readonly>
-          <input type="hidden" name="saldo_awal" id="modalSaldoAwal" value="<?= $saldoAwalCarryOver ?>">
-          <div class="form-text text-muted">Sisa saldo dari periode broadcast sebelumnya (otomatis).</div>
-        </div>
-      </div>
-      <?php if (!empty($komponenMapped)): ?>
-      <div class="alert alert-info small mb-3">
-        <i class="bi bi-info-circle"></i> <strong>Komponen terkait:</strong>
-        <?= implode(', ', array_map(fn($k) => e($k['nama']), $komponenMapped)) ?>
-      </div>
-      <?php endif; ?>
-      <h6 class="fw-bold mb-3">Rincian Pemanfaatan Dana</h6>
-      <div id="modalRincianContainer">
-        <div class="rincian-row row g-2 mb-2 align-items-end">
-          <div class="col-md-6">
-            <label class="form-label small text-muted">Keterangan</label>
-            <input class="form-control" name="rincian_keterangan[]" placeholder="Contoh: Bantuan operasional" required>
+    <div class="modal-body p-4 bg-white">
+      
+      <!-- Card Section 1: Info Dasar -->
+      <div class="p-3 rounded-4 mb-4" style="background:#f8fafc;border:1px solid #e2e8f0;">
+        <h6 class="fw-bold text-dark small text-uppercase tracking-wider mb-3"><i class="bi bi-info-circle me-1 text-primary"></i> Periode & Saldo</h6>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="tpBulan" class="form-label fw-semibold small text-muted">Bulan</label>
+            <select id="tpBulan" class="form-select bg-white" name="bulan" required>
+              <option value="">-- Pilih Bulan --</option>
+              <?php for ($m = 1; $m <= 12; $m++): ?>
+                <option value="<?= $m ?>"><?= date('F', mktime(0,0,0,$m,1)) ?></option>
+              <?php endfor; ?>
+            </select>
           </div>
           <div class="col-md-4">
-            <label class="form-label small text-muted">Nominal (Rp)</label>
-            <input type="number" class="form-control modal-rincian-nominal" name="rincian_nominal[]" placeholder="0" min="0" max="9999999999999" step="1000" required>
+            <label for="tpTahun" class="form-label fw-semibold small text-muted">Tahun</label>
+            <select id="tpTahun" class="form-select bg-white" name="tahun" required>
+              <option value="">-- Pilih Tahun --</option>
+              <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                <option value="<?= $y ?>"><?= $y ?></option>
+              <?php endfor; ?>
+            </select>
           </div>
-          <div class="col-md-2 d-grid">
-            <button type="button" class="btn btn-outline-danger btn-sm modal-remove-row" title="Hapus baris"><i class="bi bi-trash"></i></button>
+          <div class="col-md-4">
+            <label for="modalTotalPemasukan" class="form-label fw-semibold small text-muted">Total Pemasukan (Rp)</label>
+            <input type="number" class="form-control bg-white fw-semibold" name="total_pemasukan" id="modalTotalPemasukan" placeholder="0" min="0" max="9999999999999" step="1000" required>
           </div>
+        </div>
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <label for="modalSaldoAwalDisplay" class="form-label fw-semibold small text-muted">Saldo Awal (Carry-over)</label>
+            <input type="text" class="form-control bg-light text-muted fw-semibold" id="modalSaldoAwalDisplay" value="<?= rupiah($saldoAwalCarryOver) ?>" readonly>
+            <input type="hidden" name="saldo_awal" id="modalSaldoAwal" value="<?= $saldoAwalCarryOver ?>">
+            <div class="form-text text-muted small mt-1">Sisa saldo dari periode broadcast sebelumnya secara otomatis.</div>
+          </div>
+          <?php if (!empty($komponenMapped)): ?>
+          <div class="col-md-6 d-flex align-items-center">
+            <div class="p-2 px-3 rounded-3 w-100" style="background:#eff6ff;border:1px.solid #bfdbfe;color:#1e40af;font-size:0.825rem;">
+              <i class="bi bi-shield-check me-1"></i> <strong>Komponen terkait:</strong>
+              <?= implode(', ', array_map(fn($k) => e($k['nama']), $komponenMapped)) ?>
+            </div>
+          </div>
+          <?php endif; ?>
         </div>
       </div>
-      <button type="button" class="btn btn-outline-success btn-sm mb-3" id="modalAddRow">
-        <i class="bi bi-plus-circle"></i> Tambah Baris
-      </button>
-      <div class="border-top pt-3 mt-2">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="fw-semibold">Total Pemanfaatan:</span>
-          <span class="fw-bold fs-5" id="modalTotalPemanfaatanDisplay">Rp 0</span>
-        </div>
+
+      <!-- Card Section 2: Rincian Pemanfaatan -->
+      <div class="p-3 rounded-4 mb-4" style="background:#f8fafc;border:1px solid #e2e8f0;">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <span class="fw-semibold">Sisa Saldo:</span>
-          <span class="fw-bold fs-5" id="modalSisaSaldoDisplay">Rp 0</span>
+          <h6 class="fw-bold text-dark small text-uppercase tracking-wider mb-0"><i class="bi bi-list-check me-1 text-primary"></i> Rincian Pemanfaatan Dana</h6>
+          <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold shadow-none" id="modalAddRow" style="font-size:0.8rem;">
+            <i class="bi bi-plus-circle me-1"></i> Tambah Baris
+          </button>
         </div>
-        <div class="alert alert-warning small mb-3" id="modalSaldoAlert" style="display:none">
-          <i class="bi bi-exclamation-triangle"></i> Total pemanfaatan melebihi total saldo yang tersedia!
+        
+        <div id="modalRincianContainer" class="d-flex flex-column gap-2">
+          <div class="rincian-row row g-2 align-items-center p-2 rounded-3 bg-white border">
+            <div class="col-md-5">
+              <input class="form-control form-control-sm border-0 bg-transparent shadow-none" name="rincian_keterangan[]" placeholder="Keterangan..." required>
+            </div>
+            <div class="col-md-3">
+              <input type="number" class="form-control form-control-sm modal-rincian-nominal border-0 bg-transparent shadow-none fw-medium" name="rincian_nominal[]" placeholder="Nominal (Rp)..." min="0" max="9999999999999" step="1000" required>
+            </div>
+            <div class="col-md-3">
+              <label class="btn btn-sm btn-outline-primary w-100 mb-0 lampiran-label" style="border-radius:0.5rem;font-size:0.78rem;background:var(--primary-soft,#eef2ff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                <i class="bi bi-file-earmark-pdf me-1"></i><span class="lampiran-text">PDF</span>
+                <input type="file" class="d-none" name="rincian_lampiran[]" accept="application/pdf" title="Lampiran PDF (opsional)">
+              </label>
+            </div>
+            <div class="col-md-1 text-end">
+              <button type="button" class="btn btn-link text-danger p-0 modal-remove-row" title="Hapus baris"><i class="bi bi-trash fs-6"></i></button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Card Section 3: Summary / Kalkulasi -->
+      <div class="p-3 rounded-4 text-white" style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);box-shadow:0 10px 15px -3px rgba(15, 23, 42, 0.2);">
+        <div class="row align-items-center">
+          <div class="col-md-6 border-end border-secondary border-opacity-25">
+            <div class="text-white-55 small uppercase tracking-wider mb-1">Total Pemanfaatan</div>
+            <div class="fs-4 fw-bold font-monospace" id="modalTotalPemanfaatanDisplay">Rp 0</div>
+          </div>
+          <div class="col-md-6 ps-md-4">
+            <div class="text-white-55 small uppercase tracking-wider mb-1">Sisa Saldo Akhir</div>
+            <div class="fs-4 fw-bold font-monospace text-info" id="modalSisaSaldoDisplay">Rp 0</div>
+          </div>
+        </div>
+        <div class="alert alert-warning border-0 small mt-3 mb-0 py-2 px-3 rounded-3 text-dark bg-warning bg-opacity-75" id="modalSaldoAlert" style="display:none">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i> Total pemanfaatan melebihi total saldo yang tersedia!
+        </div>
+      </div>
+
     </div>
-    <div class="modal-footer border-0 d-flex gap-2">
-      <button type="button" class="btn-secondary-modern" data-bs-dismiss="modal">Batal</button>
-      <button class="btn-primary-modern" type="submit"><i class="bi bi-check-circle"></i> Simpan Periode</button>
+    <div class="modal-footer px-4 py-3 bg-light border-top d-flex gap-2">
+      <button type="button" class="btn-secondary-modern px-4" data-bs-dismiss="modal">Batal</button>
+      <button class="btn-primary-modern px-4" type="submit"><i class="bi bi-check-circle me-1"></i> Simpan Periode</button>
     </div>
   </form>
 </div></div></div>
@@ -384,15 +415,21 @@ document.addEventListener('DOMContentLoaded', function() {
             totalPemDisplay.textContent = 'Rp ' + totalPem.toLocaleString('id-ID');
             var sisa = saldoAwal + pemasukan - totalPem;
             sisaDisplay.textContent = 'Rp ' + sisa.toLocaleString('id-ID');
-            sisaDisplay.className = 'fw-bold fs-5 ' + (sisa >= 0 ? 'text-success' : 'text-danger');
+            sisaDisplay.className = 'fs-4 fw-bold font-monospace ' + (sisa >= 0 ? 'text-info' : 'text-danger');
             alertEl.style.display = sisa < 0 ? '' : 'none';
         }
 
         addBtn.addEventListener('click', function() {
             var row = document.createElement('div');
-            row.className = 'rincian-row row g-2 mb-2 align-items-end';
-            row.innerHTML = '<div class="col-md-6"><input class="form-control" name="rincian_keterangan[]" placeholder="Keterangan" required></div><div class="col-md-4"><input type="number" class="form-control modal-rincian-nominal" name="rincian_nominal[]" placeholder="0" min="0" max="9999999999999" step="1000" required></div><div class="col-md-2 d-grid"><button type="button" class="btn btn-outline-danger btn-sm modal-remove-row" title="Hapus baris"><i class="bi bi-trash"></i></button></div>';
+            row.className = 'rincian-row row g-2 align-items-center p-2 rounded-3 bg-white border';
+            row.innerHTML = '<div class="col-md-5"><input class="form-control form-control-sm border-0 bg-transparent shadow-none" name="rincian_keterangan[]" placeholder="Keterangan..." required></div><div class="col-md-3"><input type="number" class="form-control form-control-sm modal-rincian-nominal border-0 bg-transparent shadow-none fw-medium" name="rincian_nominal[]" placeholder="0" min="0" max="9999999999999" step="1000" required></div><div class="col-md-3"><label class="btn btn-sm btn-outline-primary w-100 mb-0 lampiran-label" style="border-radius:0.5rem;font-size:0.78rem;background:var(--primary-soft,#eef2ff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><i class="bi bi-file-earmark-pdf me-1"></i><span class="lampiran-text">PDF</span><input type="file" class="d-none" name="rincian_lampiran[]" accept="application/pdf" title="Lampiran PDF (opsional)"></label></div><div class="col-md-1 text-end"><button type="button" class="btn btn-link text-danger p-0 modal-remove-row" title="Hapus baris"><i class="bi bi-trash fs-6"></i></button></div>';
             container.appendChild(row);
+            row.querySelectorAll('input[type=file]').forEach(function(inp) {
+                inp.addEventListener('change', function() {
+                    var span = inp.closest('.lampiran-label').querySelector('.lampiran-text');
+                    span.textContent = inp.files.length ? inp.files[0].name : 'PDF';
+                });
+            });
             recalc();
         });
 
@@ -411,6 +448,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         pemasukanInput.addEventListener('input', recalc);
+
+        // Lampiran label: tampilkan nama file saat dipilih (baris statis pertama)
+        container.querySelectorAll('input[type=file]').forEach(function(inp) {
+            inp.addEventListener('change', function() {
+                var span = inp.closest('.lampiran-label').querySelector('.lampiran-text');
+                span.textContent = inp.files.length ? inp.files[0].name : 'PDF';
+            });
+        });
 
         document.getElementById('tambahPeriodeModal').addEventListener('shown.bs.modal', recalc);
         recalc();

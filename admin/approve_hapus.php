@@ -81,6 +81,15 @@ if ($action === 'approve') {
     try {
         $pdo->beginTransaction();
 
+        // Hapus file lampiran fisik sebelum DELETE periode (CASCADE)
+        $lampStmt = $pdo->prepare("SELECT lampiran FROM dana_pemanfaatan WHERE periode_id = ? AND lampiran IS NOT NULL");
+        $lampStmt->execute([$periodeId]);
+        $lampiranFiles = $lampStmt->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($lampiranFiles as $f) {
+            $p = __DIR__ . '/../uploads/lampiran/' . $f;
+            if (file_exists($p)) unlink($p);
+        }
+
         // UPDATE hapus_request SEBELUM DELETE periode
         // agar status tersimpan. Saat periode di-DELETE,
         // dana_hapus_request.periode_id akan di-SET NULL (FK ON DELETE SET NULL)

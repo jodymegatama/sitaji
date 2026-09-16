@@ -226,7 +226,7 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
         $curStmt->execute([$periodeId]);
         $curPeriode = $curStmt->fetch();
 
-        $curRincianStmt = $pdo->prepare("SELECT keterangan, nominal FROM dana_pemanfaatan WHERE periode_id = ? ORDER BY id ASC");
+        $curRincianStmt = $pdo->prepare("SELECT keterangan, nominal, lampiran FROM dana_pemanfaatan WHERE periode_id = ? ORDER BY id ASC");
         $curRincianStmt->execute([$periodeId]);
         $curRincian = $curRincianStmt->fetchAll();
 
@@ -234,6 +234,43 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
         $curTotalPem = array_sum(array_column($curRincian, 'nominal'));
         $newTotalPem = array_sum(array_column($newRincian, 'nominal'));
         $collapseId = "revDetail_" . $revisiId;
+
+        // === Diff engine: match baris lama <-> baru berdasarkan keterangan (normalized) ===
+        $curPool = [];
+        foreach ($curRincian as $r) {
+            $k = mb_strtolower(trim((string)$r['keterangan']));
+            $curPool[$k][] = $r;
+        }
+        $diffRows = [];
+        $dNom = 0; $dLampGanti = 0; $dLampBaru = 0; $dLampHapus = 0; $dBarisBaru = 0;
+        foreach ($newRincian as $r) {
+            $k = mb_strtolower(trim((string)($r['keterangan'] ?? '')));
+            $old = null;
+            if (!empty($curPool[$k])) { $old = array_shift($curPool[$k]); }
+            $st = ['old' => $old, 'new' => $r, 'nominal_berubah' => false, 'lamp_status' => 'sama'];
+            if ($old === null) {
+                $st['status'] = 'baris_baru';
+                $dBarisBaru++;
+                if (!empty($r['lampiran'])) { $st['lamp_status'] = 'baru'; $dLampBaru++; }
+            } else {
+                $st['status'] = 'ada';
+                $st['nominal_berubah'] = ((float)$old['nominal'] !== (float)($r['nominal'] ?? 0));
+                if ($st['nominal_berubah']) $dNom++;
+                $oldL = $old['lampiran'] ?? null;
+                $newL = $r['lampiran'] ?? null;
+                if ($newL && $oldL && $newL !== $oldL) { $st['lamp_status'] = 'diganti'; $dLampGanti++; }
+                elseif ($newL && !$oldL) { $st['lamp_status'] = 'baru'; $dLampBaru++; }
+                elseif (!$newL && $oldL) { $st['lamp_status'] = 'dihapus'; $dLampHapus++; }
+            }
+            $diffRows[] = $st;
+        }
+        $rowsDihapus = [];
+        foreach ($curPool as $arr) {
+            foreach ($arr as $r) { $rowsDihapus[] = $r; }
+        }
+        $dBarisHapus = count($rowsDihapus);
+        $dLampTotal = $dLampGanti + $dLampBaru + $dLampHapus;
+        $hanyaLampiran = ($dNom === 0 && $dBarisBaru === 0 && $dBarisHapus === 0 && $dLampTotal > 0);
     ?>
     <div class="app-card mb-4" style="border-left:4px solid var(--warning)">
       <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
@@ -264,6 +301,29 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
         <div class="small"><?= nl2br(e($rev['alasan'] ?? '-')) ?></div>
       </div>
 
+      <?php if ($dNom + $dLampTotal + $dBarisBaru + $dBarisHapus > 0): ?>
+      <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+        <span class="small fw-semibold text-muted text-uppercase">Ringkasan Perubahan:</span>
+        <?php if ($dLampGanti): ?><span class="badge text-bg-info"><i class="bi bi-file-earmark-pdf"></i> Lampiran diganti: <?= $dLampGanti ?></span><?php endif; ?>
+        <?php if ($dLampBaru): ?><span class="badge text-bg-success"><i class="bi bi-file-earmark-plus"></i> Lampiran baru: <?= $dLampBaru ?></span><?php endif; ?>
+        <?php if ($dLampHapus): ?><span class="badge text-bg-danger"><i class="bi bi-file-earmark-x"></i> Lampiran dihapus: <?= $dLampHapus ?></span><?php endif; ?>
+        <?php if ($dNom): ?><span class="badge text-bg-warning"><i class="bi bi-cash-coin"></i> Nominal berubah: <?= $dNom ?></span><?php endif; ?>
+        <?php if ($dBarisBaru): ?><span class="badge text-bg-success"><i class="bi bi-plus-circle"></i> Baris baru: <?= $dBarisBaru ?></span><?php endif; ?>
+        <?php if ($dBarisHapus): ?><span class="badge text-bg-danger"><i class="bi bi-dash-circle"></i> Baris dihapus: <?= $dBarisHapus ?></span><?php endif; ?>
+      </div>
+      <?php else: ?>
+      <div class="mt-2">
+        <span class="badge text-bg-secondary"><i class="bi bi-dash-circle"></i> Tidak ada perubahan data</span>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($hanyaLampiran): ?>
+      <div class="alert alert-info d-flex align-items-center gap-2 mt-2 mb-0 py-2 small" role="alert">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>Revisi ini <strong>hanya mengubah lampiran PDF</strong> — tidak ada perubahan angka. Bandingkan kedua file di kolom Lampiran sebelum menyetujui.</span>
+      </div>
+      <?php endif; ?>
+
       <div class="collapse <?= $idx === 0 ? 'show' : '' ?>" id="<?= $collapseId ?>">
         <div class="mt-3">
           <div class="row g-3 mb-3">
@@ -277,13 +337,34 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
                   <span class="fw-bold text-danger"><?= rupiah($curPemasukan) ?></span>
                 </div>
                 <?php if (!empty($curRincian)): ?>
-                <table class="table table-sm mb-0" style="font-size:.8rem">
-                  <thead><tr><th>Keterangan</th><th class="text-end">Nominal</th></tr></thead>
+                <table class="table table-sm mb-0 align-middle" style="font-size:.8rem">
+                  <thead><tr><th>Keterangan</th><th class="text-end">Nominal</th><th class="text-center">Lampiran</th></tr></thead>
                   <tbody>
-                    <?php foreach ($curRincian as $r): ?>
-                    <tr><td><?= e($r['keterangan']) ?></td><td class="text-end"><?= rupiah($r['nominal']) ?></td></tr>
+                    <?php foreach ($diffRows as $st): if ($st['old'] === null) continue; $o = $st['old'];
+                        $rowCls = $st['nominal_berubah'] ? 'table-warning' : (in_array($st['lamp_status'], ['diganti','dihapus'], true) ? 'table-info' : '');
+                    ?>
+                    <tr class="<?= $rowCls ?>">
+                      <td><?= e($o['keterangan']) ?><?php if ($st['nominal_berubah']): ?> <span class="badge text-bg-warning">nominal berubah</span><?php endif; ?></td>
+                      <td class="text-end"><?= rupiah($o['nominal']) ?></td>
+                      <td class="text-center">
+                        <?php if (!empty($o['lampiran'])): ?>
+                          <a href="../uploads/lampiran/<?= e($o['lampiran']) ?>" target="_blank" class="text-muted text-decoration-none" title="Lampiran lama: <?= e($o['lampiran']) ?>"><i class="bi bi-file-pdf"></i> Lama</a>
+                        <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                      </td>
+                    </tr>
                     <?php endforeach; ?>
-                    <tr class="table-active fw-bold"><td>Total</td><td class="text-end"><?= rupiah($curTotalPem) ?></td></tr>
+                    <?php foreach ($rowsDihapus as $o): ?>
+                    <tr class="table-danger">
+                      <td><?= e($o['keterangan']) ?> <span class="badge text-bg-danger">baris dihapus</span></td>
+                      <td class="text-end"><?= rupiah($o['nominal']) ?></td>
+                      <td class="text-center">
+                        <?php if (!empty($o['lampiran'])): ?>
+                          <a href="../uploads/lampiran/<?= e($o['lampiran']) ?>" target="_blank" class="text-muted text-decoration-none" title="Lampiran lama: <?= e($o['lampiran']) ?>"><i class="bi bi-file-pdf"></i> Lama</a>
+                        <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                      </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <tr class="table-active fw-bold"><td>Total</td><td class="text-end"><?= rupiah($curTotalPem) ?></td><td></td></tr>
                   </tbody>
                 </table>
                 <?php else: ?>
@@ -301,13 +382,30 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
                   <span class="fw-bold text-success"><?= rupiah($newPemasukan) ?></span>
                 </div>
                 <?php if (!empty($newRincian)): ?>
-                <table class="table table-sm mb-0" style="font-size:.8rem">
-                  <thead><tr><th>Keterangan</th><th class="text-end">Nominal</th></tr></thead>
+                <table class="table table-sm mb-0 align-middle" style="font-size:.8rem">
+                  <thead><tr><th>Keterangan</th><th class="text-end">Nominal</th><th class="text-center">Lampiran</th></tr></thead>
                   <tbody>
-                    <?php foreach ($newRincian as $r): ?>
-                    <tr><td><?= e($r['keterangan']) ?></td><td class="text-end"><?= rupiah($r['nominal']) ?></td></tr>
+                    <?php foreach ($diffRows as $st): $n = $st['new'];
+                        $rowCls = $st['old'] === null ? 'table-success' : ($st['nominal_berubah'] ? 'table-warning' : ($st['lamp_status'] !== 'sama' ? 'table-info' : ''));
+                    ?>
+                    <tr class="<?= $rowCls ?>">
+                      <td><?= e($n['keterangan']) ?>
+                        <?php if ($st['old'] === null): ?> <span class="badge text-bg-success">baris baru</span><?php endif; ?>
+                        <?php if ($st['nominal_berubah']): ?> <span class="badge text-bg-warning">nominal diubah</span><?php endif; ?>
+                      </td>
+                      <td class="text-end"><?= rupiah($n['nominal']) ?></td>
+                      <td class="text-center">
+                        <?php if (!empty($n['lampiran'])): ?>
+                          <a href="../uploads/lampiran/<?= e($n['lampiran']) ?>" target="_blank" class="text-primary text-decoration-none" title="Lampiran baru: <?= e($n['lampiran']) ?>"><i class="bi bi-file-pdf"></i> PDF</a>
+                          <?php if ($st['lamp_status'] === 'diganti'): ?> <span class="badge text-bg-info">diganti</span>
+                          <?php elseif ($st['lamp_status'] === 'baru'): ?> <span class="badge text-bg-success">baru</span><?php endif; ?>
+                        <?php elseif ($st['lamp_status'] === 'dihapus'): ?>
+                          <span class="badge text-bg-danger">dihapus</span>
+                        <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                      </td>
+                    </tr>
                     <?php endforeach; ?>
-                    <tr class="table-active fw-bold"><td>Total</td><td class="text-end"><?= rupiah($newTotalPem) ?></td></tr>
+                    <tr class="table-active fw-bold"><td>Total</td><td class="text-end"><?= rupiah($newTotalPem) ?></td><td></td></tr>
                   </tbody>
                 </table>
                 <?php else: ?>
@@ -346,7 +444,7 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-muted"></i> Riwayat Revisi</h5>
       </div>
-      <table class="table data-table align-middle" data-empty-message="Belum ada riwayat revisi.">
+      <table class="table data-table align-middle" data-empty-message="Belum ada riwayat revisi." data-order='[[4,"desc"]]'>
         <thead>
           <tr><th>Pemangku</th><th>Periode</th><th>Status</th><th>Diajukan</th><th>Diproses</th><th>Oleh</th><th>Catatan</th></tr>
         </thead>
@@ -362,8 +460,8 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
                 <span class="badge bg-danger">Ditolak</span>
               <?php endif; ?>
             </td>
-            <td class="small"><?= date('d M Y H:i', strtotime($h['created_at'])) ?></td>
-            <td class="small"><?= $h['diproses_at'] ? date('d M Y H:i', strtotime($h['diproses_at'])) : '-' ?></td>
+            <td class="small" data-order="<?= $h['created_at'] ? date('Y-m-d H:i:s', strtotime($h['created_at'])) : '' ?>"><?= date('d M Y H:i', strtotime($h['created_at'])) ?></td>
+            <td class="small" data-order="<?= $h['diproses_at'] ? date('Y-m-d H:i:s', strtotime($h['diproses_at'])) : '' ?>"><?= $h['diproses_at'] ? date('d M Y H:i', strtotime($h['diproses_at'])) : '-' ?></td>
             <td class="small"><?= e($h['diproses_username'] ?? '-') ?></td>
             <td class="small" style="max-width:200px"><?= e($h['catatan_admin'] ?? '-') ?></td>
           </tr>
@@ -459,7 +557,7 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-muted"></i> Riwayat Penghapusan</h5>
       </div>
-      <table class="table data-table align-middle" data-empty-message="Belum ada riwayat penghapusan.">
+      <table class="table data-table align-middle" data-empty-message="Belum ada riwayat penghapusan." data-order='[[4,"desc"]]'>
         <thead>
           <tr><th>Pemangku</th><th>Periode</th><th>Status</th><th>Diajukan</th><th>Diproses</th><th>Oleh</th><th>Catatan</th></tr>
         </thead>
@@ -475,8 +573,8 @@ $bulanNama = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni
                 <span class="badge bg-danger">Ditolak</span>
               <?php endif; ?>
             </td>
-            <td class="small"><?= date('d M Y H:i', strtotime($h['created_at'])) ?></td>
-            <td class="small"><?= $h['diproses_at'] ? date('d M Y H:i', strtotime($h['diproses_at'])) : '-' ?></td>
+            <td class="small" data-order="<?= $h['created_at'] ? date('Y-m-d H:i:s', strtotime($h['created_at'])) : '' ?>"><?= date('d M Y H:i', strtotime($h['created_at'])) ?></td>
+            <td class="small" data-order="<?= $h['diproses_at'] ? date('Y-m-d H:i:s', strtotime($h['diproses_at'])) : '' ?>"><?= $h['diproses_at'] ? date('d M Y H:i', strtotime($h['diproses_at'])) : '-' ?></td>
             <td class="small"><?= e($h['diproses_username'] ?? '-') ?></td>
             <td class="small" style="max-width:200px"><?= e($h['catatan_admin'] ?? '-') ?></td>
           </tr>

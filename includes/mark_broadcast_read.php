@@ -17,12 +17,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-csrf_check();
-
 $cu = current_user();
 if (!$cu) {
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'Not authenticated']);
+    exit;
+}
+
+// CSRF: validasi token session (JSON-safe — jangan pakai csrf_check() yang die() teks polos)
+$token = $_POST['csrf'] ?? '';
+if (empty($token) || !hash_equals($_SESSION['csrf'] ?? '', $token)) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'csrf_mismatch']);
     exit;
 }
 

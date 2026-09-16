@@ -54,6 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Bangun array rincian yang valid
     $rincianNew = [];
+    $uploadDir = __DIR__ . '/../uploads/lampiran/';
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
     for ($i = 0; $i < count($rincianKeterangan); $i++) {
         $ket = trim($rincianKeterangan[$i] ?? '');
         $nom = (float)($rincianNominal[$i] ?? 0);
@@ -62,7 +65,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: edit_periode?id=' . $id . '&error=nominal_over');
                 exit;
             }
-            $rincianNew[] = ['keterangan' => $ket, 'nominal' => $nom];
+            $lampiran = null;
+            if (isset($_FILES['rincian_lampiran']['name'][$i]) && $_FILES['rincian_lampiran']['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+                $fErr = $_FILES['rincian_lampiran']['error'][$i];
+                if ($fErr !== UPLOAD_ERR_OK) {
+                    header('Location: edit_periode?id=' . $id . '&error=upload');
+                    exit;
+                }
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->file($_FILES['rincian_lampiran']['tmp_name'][$i]);
+                if ($mime !== 'application/pdf') {
+                    header('Location: edit_periode?id=' . $id . '&error=not_pdf');
+                    exit;
+                }
+                $safeName = date('Ymd') . '_' . uniqid() . '_' . bin2hex(random_bytes(4)) . '.pdf';
+                if (!move_uploaded_file($_FILES['rincian_lampiran']['tmp_name'][$i], $uploadDir . $safeName)) {
+                    header('Location: edit_periode?id=' . $id . '&error=upload');
+                    exit;
+                }
+                $lampiran = $safeName;
+            }
+            $rincianNew[] = ['keterangan' => $ket, 'nominal' => $nom, 'lampiran' => $lampiran];
         }
     }
 
@@ -87,12 +110,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE dana_periode SET total_pemasukan = ? WHERE id = ?")
             ->execute([$totalPemasukan, $id]);
 
-        // Replace rincian: hapus lama, insert baru
+        // Replace rincian: hapus lama (dan file lampiran lama), insert baru
+        $oldRincian = $pdo->prepare("SELECT lampiran FROM dana_pemanfaatan WHERE periode_id = ? AND lampiran IS NOT NULL");
+        $oldRincian->execute([$id]);
+        $oldFiles = $oldRincian->fetchAll(PDO::FETCH_COLUMN);
         $pdo->prepare("DELETE FROM dana_pemanfaatan WHERE periode_id = ?")
             ->execute([$id]);
-        $stmt = $pdo->prepare("INSERT INTO dana_pemanfaatan (periode_id, keterangan, nominal) VALUES (?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO dana_pemanfaatan (periode_id, keterangan, nominal, lampiran) VALUES (?, ?, ?, ?)");
         foreach ($rincianNew as $r) {
-            $stmt->execute([$id, $r['keterangan'], $r['nominal']]);
+            $stmt->execute([$id, $r['keterangan'], $r['nominal'], $r['lampiran']]);
+            // Jika baris ini tidak upload file baru, pertahankan file lama? Tidak — rincian diganti total, hapus file lama yang tidak dipakai ulang
+        }
+        // Hapus file lama yang tidak direferensikan lagi (kecuali jika dipakai ulang — tidak ada mekanisme reuse, jadi hapus semua file lama yang berubah)
+        $newFiles = array_filter(array_column($rincianNew, 'lampiran'));
+        foreach ($oldFiles as $f) {
+            if (!in_array($f, $newFiles, true)) {
+                $p = __DIR__ . '/../uploads/lampiran/' . $f;
+                if (file_exists($p)) unlink($p);
+            }
         }
 
         $pdo->commit();
@@ -113,7 +148,8 @@ if ($error === 'nominal_invalid') { $flashMsg = 'Total nominal harus lebih dari 
 elseif ($error === 'pemanfaatan_over') { $flashMsg = 'Total pemanfaatan melebihi total saldo yang tersedia (saldo awal + pemasukan).'; $flashType = 'danger'; }
 elseif ($error === 'rincian_empty') { $flashMsg = 'Tambahkan minimal 1 rincian pemanfaatan dana.'; $flashType = 'danger'; }
 elseif ($error === 'nominal_over') { $flashMsg = 'Nominal terlalu besar. Maksimal 9.999.999.999.999 (13 digit).'; $flashType = 'danger'; }
-elseif ($error === 'db') { $flashMsg = 'Terjadi kesalahan database.'; $flashType = 'danger'; }
+elseif ($error === 'upload') { $flashMsg = 'Gagal memproses file lampiran PDF.'; $flashType = 'danger'; }
+elseif ($error === 'not_pdf') { $flashMsg = 'Lampiran harus berupa file PDF yang valid.'; $flashType = 'danger'; }
 ?>
 
 <div class="d-flex align-items-center gap-3 mb-4">
@@ -129,7 +165,7 @@ elseif ($error === 'db') { $flashMsg = 'Terjadi kesalahan database.'; $flashType
 <?php endif; ?>
 
 <div class="app-card" style="max-width:800px">
-  <form method="post" data-validate novalidate id="formEditPeriode">
+  <form method="post" data-validate novalidate id="formEditPeriode" enctype="multipart/form-data">
     <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
 
     <div class="row g-3 mb-4">
@@ -161,8 +197,16 @@ elseif ($error === 'db') { $flashMsg = 'Terjadi kesalahan database.'; $flashType
     <div id="rincianContainer">
       <?php foreach ($rincian as $i => $r): ?>
       <div class="rincian-row row g-2 mb-2 align-items-end">
-        <div class="col-md-6"><input class="form-control" name="rincian_keterangan[]" value="<?= e($r['keterangan']) ?>" placeholder="Keterangan" required></div>
-        <div class="col-md-4"><input type="number" class="form-control rincian-nominal" name="rincian_nominal[]" value="<?= (int)$r['nominal'] ?>" min="0" max="9999999999999" step="1000" required></div>
+        <div class="col-md-5"><input class="form-control" name="rincian_keterangan[]" value="<?= e($r['keterangan']) ?>" placeholder="Keterangan" required></div>
+        <div class="col-md-3"><input type="number" class="form-control rincian-nominal" name="rincian_nominal[]" value="<?= (int)$r['nominal'] ?>" min="0" max="9999999999999" step="1000" required></div>
+        <div class="col-md-2">
+          <?php if (!empty($r['lampiran'])): ?>
+            <a href="../uploads/lampiran/<?= e($r['lampiran']) ?>" target="_blank" class="small text-decoration-none text-primary"><i class="bi bi-file-pdf"></i> <?= e($r['lampiran']) ?></a>
+          <?php else: ?>
+            <span class="text-muted small">Tidak ada</span>
+          <?php endif; ?>
+          <input type="file" class="form-control form-control-sm mt-1" name="rincian_lampiran[]" accept="application/pdf" title="Ganti lampiran PDF">
+        </div>
         <div class="col-md-2 d-grid"><button type="button" class="btn btn-outline-danger btn-sm remove-row"><i class="bi bi-trash"></i></button></div>
       </div>
       <?php endforeach; ?>
@@ -217,7 +261,7 @@ elseif ($error === 'db') { $flashMsg = 'Terjadi kesalahan database.'; $flashType
   addBtn.addEventListener('click', function() {
     const row = document.createElement('div');
     row.className = 'rincian-row row g-2 mb-2 align-items-end';
-    row.innerHTML = '<div class="col-md-6"><input class="form-control" name="rincian_keterangan[]" placeholder="Keterangan" required></div><div class="col-md-4"><input type="number" class="form-control rincian-nominal" name="rincian_nominal[]" placeholder="0" min="0" max="9999999999999" step="1000" required></div><div class="col-md-2 d-grid"><button type="button" class="btn btn-outline-danger btn-sm remove-row"><i class="bi bi-trash"></i></button></div>';
+    row.innerHTML = '<div class="col-md-5"><input class="form-control" name="rincian_keterangan[]" placeholder="Keterangan" required></div><div class="col-md-3"><input type="number" class="form-control rincian-nominal" name="rincian_nominal[]" placeholder="0" min="0" max="9999999999999" step="1000" required></div><div class="col-md-2"><input type="file" class="form-control form-control-sm" name="rincian_lampiran[]" accept="application/pdf" title="Lampiran PDF (opsional)"></div><div class="col-md-2 d-grid"><button type="button" class="btn btn-outline-danger btn-sm remove-row"><i class="bi bi-trash"></i></button></div>';
     container.appendChild(row);
     row.querySelector('.remove-row').addEventListener('click', function(){ row.remove(); recalc(); });
     row.querySelectorAll('input[type=number]').forEach(el => el.addEventListener('input', recalc));

@@ -56,6 +56,11 @@ if (window.jQuery) {
           { orderable: false, targets: -1 },
         ];
       }
+      // Urutan awal custom per tabel, mis. data-order='[[4,"desc"]]'
+      const orderAttr = $t.attr('data-order');
+      if (orderAttr) {
+        try { opts.order = JSON.parse(orderAttr); } catch (e) { /* abaikan format tidak valid */ }
+      }
       $t.DataTable(opts);
     });
   });
