@@ -32,11 +32,11 @@ function require_role(string|array $role): void {
 }
 
 function base_url(string $path = ''): string {
-    $name = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
-    $root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
+    $name = str_replace('\\\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
+    $root = str_replace('\\\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
 
     // aaPanel Nginx VPS auto-detection: DOCUMENT_ROOT starts with /www/wwwroot/
-    if (str_starts_with($root, '/www/wwwroot/')) {
+    if (preg_match('#^/www/wwwroot/', $root)) {
         $dir = rtrim(dirname($name), '/');
         if (preg_match('#/(admin|pegawai|stakeholder)$#', $dir)) {
             $dir = preg_replace('#/(admin|pegawai|stakeholder)$#', '', $dir);
