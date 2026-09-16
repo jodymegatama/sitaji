@@ -32,8 +32,8 @@ function require_role(string|array $role): void {
 }
 
 function base_url(string $path = ''): string {
-    $name = str_replace('\\\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
-    $root = str_replace('\\\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
+    $name = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
+    $root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? '');
 
     // aaPanel Nginx VPS auto-detection: DOCUMENT_ROOT starts with /www/wwwroot/
     if (preg_match('#^/www/wwwroot/', $root)) {
@@ -46,7 +46,7 @@ function base_url(string $path = ''): string {
 
     // Default (Laragon Apache local):
     if (preg_match('#^[A-Za-z]:/#', $name)) {
-        if ($root !== '' && str_starts_with($name, $root)) {
+        if ($root !== '' && strpos($name, $root) === 0) {
             $name = substr($name, strlen($root));
         } else {
             $name = '/';
